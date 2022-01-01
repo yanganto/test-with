@@ -1,42 +1,32 @@
 use proc_macro::TokenStream;
-use proc_macro_error::{abort_call_site, proc_macro_error};
-use regex::Regex;
+use quote::quote;
+use syn::{parse_macro_input, ItemFn};
 
-#[proc_macro_error]
 #[proc_macro_attribute]
-pub fn env(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let context = item.to_string();
-    let fn_re = Regex::new(r"^fn (?P<fn_name>[^\(\s]*)(?P<to_first_bracket>[^\{]*\{)").unwrap();
-
-    if fn_re.captures(&context).is_some() {
-        let var_name = attr.to_string().replace(" ", "");
-        return if std::env::var(var_name).is_ok() {
-            fn_re
-                .replace(
-                    &context,
-                    r#"
-                #[test]
-                fn $fn_name () {
-                    "#,
-                )
-                .to_string()
-                .parse()
-                .unwrap()
-        } else {
-            fn_re
-                .replace(
-                    &context,
-                    r#"
-                #[test]
-                #[ignore = "var not found"]
-                fn $fn_name () {
-                    "#,
-                )
-                .to_string()
-                .parse()
-                .unwrap()
-        };
+pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as ItemFn);
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = input;
+    let var_name = attr.to_string().replace(" ", "");
+    let ignore_msg = format!("ignored, because variable `{}` not found", &var_name);
+    return if std::env::var(var_name).is_ok() {
+        quote! {
+            #(#attrs)*
+            #[test]
+            #vis #sig #block
+        }
+        .into()
     } else {
-        abort_call_site!("parse mod or function for testing error")
-    }
+        quote! {
+           #(#attrs)*
+           #[test]
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
+        }
+        .into()
+    };
 }
