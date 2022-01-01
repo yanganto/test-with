@@ -1,6 +1,6 @@
 [package]
 name = "test-with"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -11,7 +11,7 @@ repository = "https://github.com/yanganto/test-with"
 proc-macro = true
 
 [dependencies]
-syn = { version = "1.0.84", features = [ "full" ] }
-proc-macro2 = "1.0.36"
 proc-macro-error = "1.0.4"
+proc-macro2 = "1.0.36"
 quote = "1.0.14"
+syn = { version = "1.0.84", features = [ "full" ] }
