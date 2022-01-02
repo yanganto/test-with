@@ -29,9 +29,18 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
         sig,
         block,
     } = input;
-    let var_name = attr.to_string().replace(" ", "");
-    let ignore_msg = format!("ignored, because variable `{}` not found", &var_name);
-    return if std::env::var(var_name).is_ok() {
+    let attr_str = attr.to_string().replace(" ", "");
+    let var_names: Vec<&str> = attr_str.split(',').collect();
+    let mut all_var_exist = true;
+    let mut ignore_msg = "because following variable not found:".to_string();
+    for var in var_names.iter() {
+        if std::env::var(var).is_err() {
+            all_var_exist = false;
+            ignore_msg.push(' ');
+            ignore_msg.push_str(var);
+        }
+    }
+    return if all_var_exist {
         quote! {
             #(#attrs)*
             #[test]
