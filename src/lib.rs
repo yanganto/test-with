@@ -18,6 +18,12 @@ use syn::{parse_macro_input, ItemFn};
 ///     fn test_ignored() {
 ///         panic!("should be ignored")
 ///     }
+///
+///     // NOT_SAYING environment variable does not exist
+///     #[test_with::env(PWD, NOT_SAYING)]
+///     fn test_ignored_too() {
+///         panic!("should be ignored")
+///     }
 /// }
 /// ```
 #[proc_macro_attribute]
