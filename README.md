@@ -80,6 +80,6 @@ you can write it with multiple file/path,
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]: https://github.com/yanganto/test-with/blob/readme/LICENSE
 [doc-badge]: https://img.shields.io/badge/docs-rs-orange.svg
-[doc-url]: https://docs.rs/test-with/0.1.0/test_with/
+[doc-url]: https://docs.rs/test-with/latest/test_with/
 [original-issue]: https://github.com/rust-lang/rust/issues/68007
 [rust-pre-rfc]: https://internals.rust-lang.org/t/pre-rfc-provide-ignore-message-when-the-test-ignored/15904
