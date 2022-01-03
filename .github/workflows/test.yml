@@ -23,5 +23,14 @@ jobs:
       - name: Check typo
         run: nix develop -c 'typos' --exclude ssvm-evmc
 
+      - name: Super-Linter
+        uses: github/super-linter@v4
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          DEFAULT_BRANCH: main
+          VALIDATE_RUST_2021: true
+          VALIDATE_RUST_CLIPPY: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Default test
         run: nix develop -c cargo test --examples
