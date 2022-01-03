@@ -39,6 +39,38 @@ test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; fini
 If the test depends on more than one environment variables,
 you can write it with multiple variables, `#[test_with::env(VAR1, VAR2)]`.
 
+## File/Folder
+Run test case when the file or folder exist.  This is good for testing with database config.
+If you want to check the folder exist or not, please use `path`.
+
+```rust
+#[cfg(test)]
+mod tests {
+
+    // hostname exists
+    #[test_with::file(/etc/hostname)]
+    fn test_works() {
+        assert!(true);
+    }
+
+    // nothing file does not exist
+    #[test_with::file(/etc/nothing)]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+
+    // etc exists
+    #[test_with::path(/etc)]
+    fn test_works_for_path() {
+        assert!(true);
+    }
+}
+```
+
+If the test depends on more than one file or path,
+you can write it with multiple file/path,
+`#[test_with::file(/file1, /file2)]` or `#[test_with::path(/folder, /file)]`.
+
 ## Relating issues
 * [Solve this in runtime][original-issue]
 * [provide ignore message in cargo][rust-pre-rfc]
