@@ -25,6 +25,8 @@
         devShell = mkShell {
           buildInputs = [
             rust
+            openssl
+            pkg-config
 
             publishScript
           ];
