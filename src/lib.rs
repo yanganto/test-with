@@ -189,3 +189,117 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
         .into()
     };
 }
+
+/// Run test case when the http service exist.
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // http service exists
+///     #[test_with::http(httpbin.org)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+///
+///     // There is no not.exist.com
+///     #[test_with::http(not.exist.com)]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as ItemFn);
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = input;
+    let attr_str = attr.to_string().replace(" ", "");
+    let links: Vec<&str> = attr_str.split(',').collect();
+    let mut all_link_exist = true;
+    let mut ignore_msg = "because following link not found:".to_string();
+    let client = reqwest::blocking::Client::new();
+    for link in links.iter() {
+        if client.head(&format!("http://{}", link)).send().is_err() {
+            all_link_exist = false;
+            ignore_msg.push('\n');
+            ignore_msg.push_str(link);
+        }
+    }
+    return if all_link_exist {
+        quote! {
+            #(#attrs)*
+            #[test]
+            #vis #sig #block
+        }
+        .into()
+    } else {
+        quote! {
+           #(#attrs)*
+           #[test]
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
+        }
+        .into()
+    };
+}
+
+/// Run test case when the https service exist.
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // https server exists
+///     #[test_with::https(www.rust-lang.org)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+///
+///     // There is no not.exist.com
+///     #[test_with::https(not.exist.com)]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as ItemFn);
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = input;
+    let attr_str = attr.to_string().replace(" ", "");
+    let links: Vec<&str> = attr_str.split(',').collect();
+    let mut all_link_exist = true;
+    let mut ignore_msg = "because following link not found:".to_string();
+    let client = reqwest::blocking::Client::new();
+    for link in links.iter() {
+        if client.head(&format!("https://{}", link)).send().is_err() {
+            all_link_exist = false;
+            ignore_msg.push('\n');
+            ignore_msg.push_str(link);
+        }
+    }
+    return if all_link_exist {
+        quote! {
+            #(#attrs)*
+            #[test]
+            #vis #sig #block
+        }
+        .into()
+    } else {
+        quote! {
+           #(#attrs)*
+           #[test]
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
+        }
+        .into()
+    };
+}

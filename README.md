@@ -71,6 +71,31 @@ If the test depends on more than one file or path,
 you can write it with multiple file/path,
 `#[test_with::file(/file1, /file2)]` or `#[test_with::path(/folder, /file)]`.
 
+## Http/Https Service
+Run test case when the http/https service available.  This is good for intefration testing.
+
+```rust
+#[cfg(test)]
+mod tests {
+
+    // https service exists
+    #[test_with::https(www.rust-lang.org)]
+    fn test_works() {
+        assert!(true);
+    }
+
+    // There is no not.exist.com
+    #[test_with::https(not.exist.com)]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
+```
+
+If the test depends on more than one service,
+you can write it with multiple service,
+`#[test_with::http(service1, service2)]` or `#[test_with::http2(service1, service2)]`.
+
 ## Relating issues
 * [Solve this in runtime][original-issue]
 * [provide ignore message in cargo][rust-pre-rfc]
