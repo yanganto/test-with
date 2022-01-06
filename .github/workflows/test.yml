@@ -32,5 +32,5 @@ jobs:
           VALIDATE_RUST_CLIPPY: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Default test
+      - name: Example test
         run: nix develop -c cargo test --examples
