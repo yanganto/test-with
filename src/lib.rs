@@ -1,7 +1,13 @@
-use std::{fs::metadata, path::Path};
+use std::{
+    fs::metadata,
+    net::{IpAddr, Ipv4Addr},
+    path::Path,
+};
 
 use proc_macro::TokenStream;
+use proc_macro_error::abort_call_site;
 use quote::quote;
+use regex::Regex;
 use syn::{parse_macro_input, ItemFn};
 
 /// Run test case when the environment variable is set.
@@ -287,6 +293,82 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
     }
     return if all_link_exist {
+        quote! {
+            #(#attrs)*
+            #[test]
+            #vis #sig #block
+        }
+        .into()
+    } else {
+        quote! {
+           #(#attrs)*
+           #[test]
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
+        }
+        .into()
+    };
+}
+
+fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntError> {
+    Ok(IpAddr::V4(Ipv4Addr::new(
+        cap[1].parse::<u8>()?,
+        cap[2].parse::<u8>()?,
+        cap[3].parse::<u8>()?,
+        cap[4].parse::<u8>()?,
+    )))
+}
+
+/// Run test case when the server online.
+/// Please make sure the role of test case runner have capability to open socket
+///
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // localhost is online
+///     #[test_with::icmp(127.0.0.1)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+///
+///     // 193.194.195.196 is offline
+///     #[test_with::icmp(193.194.195.196)]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as ItemFn);
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = input;
+    let attr_str = attr.to_string().replace(" ", "");
+    let ipv4s: Vec<&str> = attr_str.split(',').collect();
+    let ipv4_re = Regex::new(r"^(\d+).(\d+).(\d+).(\d+)$").unwrap();
+    let mut all_ipv4_exist = true;
+    let mut ignore_msg = "because following ipv4 not found:".to_string();
+    for ipv4 in ipv4s.iter() {
+        if let Some(cap) = ipv4_re.captures(ipv4) {
+            if let Ok(addr_v4) = parse_ipv4_addre(cap) {
+                if ping::ping(addr_v4, None, None, None, None, None).is_err() {
+                    all_ipv4_exist = false;
+                    ignore_msg.push('\n');
+                    ignore_msg.push_str(ipv4);
+                }
+            } else {
+                abort_call_site!("ip v4 address malformat, digit not u8")
+            }
+        } else {
+            abort_call_site!("ip v4 address malformat")
+        }
+    }
+    return if all_ipv4_exist {
         quote! {
             #(#attrs)*
             #[test]
