@@ -1,7 +1,7 @@
 name: Test
 
 concurrency:
-  group: typo-${{ github.head_ref }}
+  group: test-${{ github.head_ref }}
   cancel-in-progress: true
 
 on:
@@ -16,21 +16,6 @@ jobs:
       - uses: cachix/install-nix-action@v15
         with:
           nix_path: nixpkgs=channel:nixos-unstable
-
-      - name: Install typos
-        run: nix develop -c 'cargo' install typos-cli
-
-      - name: Check typo
-        run: nix develop -c 'typos' --exclude ssvm-evmc
-
-      - name: Super-Linter
-        uses: github/super-linter@v4
-        env:
-          VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: main
-          VALIDATE_RUST_2021: true
-          VALIDATE_RUST_CLIPPY: true
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Example test
         run: nix develop -c cargo test --examples
