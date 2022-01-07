@@ -1,6 +1,6 @@
 use std::{
     fs::metadata,
-    net::{IpAddr, Ipv4Addr},
+    net::{IpAddr, Ipv4Addr, TcpStream},
     path::Path,
 };
 
@@ -369,6 +369,63 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
     }
     return if all_ipv4_exist {
+        quote! {
+            #(#attrs)*
+            #[test]
+            #vis #sig #block
+        }
+        .into()
+    } else {
+        quote! {
+           #(#attrs)*
+           #[test]
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
+        }
+        .into()
+    };
+}
+
+/// Run test case when socket connected
+///
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // Google DNS is online
+///     #[test_with::tcp(8.8.8.8:53)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+///
+///     // 193.194.195.196 is offline
+///     #[test_with::tcp(193.194.195.196)]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(stream as ItemFn);
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = input;
+    let attr_str = attr.to_string().replace(" ", "");
+    let sockets: Vec<&str> = attr_str.split(',').collect();
+    let mut all_socket_exist = true;
+    let mut ignore_msg = "because following socket not found:".to_string();
+    for socket in sockets.iter() {
+        if TcpStream::connect(socket).is_err() {
+            all_socket_exist = false;
+            ignore_msg.push('\n');
+            ignore_msg.push_str(socket);
+        }
+    }
+    return if all_socket_exist {
         quote! {
             #(#attrs)*
             #[test]
