@@ -354,7 +354,7 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     for ipv4 in ipv4s.iter() {
         if let Some(cap) = ipv4_re.captures(ipv4) {
             if let Ok(addr_v4) = parse_ipv4_addre(cap) {
-                if icmp::IcmpSocket::connect(addr_v4).is_err() {
+                if ping::ping(addr_v4, None, None, None, None, None).is_err() {
                     all_ipv4_exist = false;
                     ignore_msg.push('\n');
                     ignore_msg.push_str(ipv4);
