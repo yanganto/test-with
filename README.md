@@ -3,7 +3,7 @@
 [![MIT licensed][mit-badge]][mit-url]
 [![Docs][doc-badge]][doc-url]
 
-A lib help you run test with condition
+A lib help you run test with condition, else the test will be ignored.
 
 ## Environment Variable
 Run test case when the environment variable is set.
@@ -99,7 +99,7 @@ you can write it with multiple service,
 ## TCP socket
 Run integration test case when the remote tcp socket is listening.
 
-```
+```rust
 #[cfg(test)]
 mod tests {
     #[test_with::tcp(8.8.8.8:53)]
@@ -118,7 +118,7 @@ mod tests {
 Run integration test case when the remote server online.
 **Please note the user running test case should have capability to open socket**.
 
-```
+```rust
 #[cfg(test)]
 mod tests {
 
