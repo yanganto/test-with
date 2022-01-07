@@ -320,6 +320,8 @@ fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntEr
 }
 
 /// Run test case when the server online.
+/// Please make sure the role of test case runner have capability to open socket
+///
 /// ```
 /// #[cfg(test)]
 /// mod tests {

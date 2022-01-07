@@ -72,7 +72,7 @@ you can write it with multiple file/path,
 `#[test_with::file(/file1, /file2)]` or `#[test_with::path(/folder, /file)]`.
 
 ## Http/Https Service
-Run test case when the http/https service available.  This is good for intefration testing.
+Run test case when the http/https service available.  This is good for integration testing.
 
 ```rust
 #[cfg(test)]
@@ -95,6 +95,28 @@ mod tests {
 If the test depends on more than one service,
 you can write it with multiple service,
 `#[test_with::http(service1, service2)]` or `#[test_with::http2(service1, service2)]`.
+
+## Remote Server Online Status
+Run integration test case when the remote server online.
+**Please note the user running test case should have capability to open socket**.
+
+```
+#[cfg(test)]
+mod tests {
+
+    // localhost is online
+    #[test_with::icmp(127.0.0.1)]
+    fn test_works() {
+        assert!(true);
+    }
+
+    // 193.194.195.196 is offline
+    #[test_with::icmp(193.194.195.196)]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
+```
 
 ## Relating issues
 * [Solve this in runtime][original-issue]
