@@ -38,3 +38,16 @@ mod icmp_tests {
         panic!("should be ignored")
     }
 }
+
+#[cfg(test)]
+mod tcp_tests {
+    #[test_with::tcp(8.8.8.8:53)]
+    fn test_works() {
+        assert!(true);
+    }
+
+    #[test_with::tcp(193.194.195.196)]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}

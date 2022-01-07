@@ -5,7 +5,7 @@
 
 A lib help you run test with condition
 
-## Environment variable
+## Environment Variable
 Run test case when the environment variable is set.
 A solution for this [issue][original-issue] of rust-lang.
 
@@ -95,6 +95,24 @@ mod tests {
 If the test depends on more than one service,
 you can write it with multiple service,
 `#[test_with::http(service1, service2)]` or `#[test_with::http2(service1, service2)]`.
+
+## TCP socket
+Run integration test case when the remote tcp socket is listening.
+
+```
+#[cfg(test)]
+mod tests {
+    #[test_with::tcp(8.8.8.8:53)]
+    fn test_works() {
+        assert!(true);
+    }
+
+    #[test_with::tcp(193.194.195.196)]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
+```
 
 ## Remote Server Online Status
 Run integration test case when the remote server online.
