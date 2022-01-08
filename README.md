@@ -3,11 +3,21 @@
 [![MIT licensed][mit-badge]][mit-url]
 [![Docs][doc-badge]][doc-url]
 
-A lib help you run test with condition, else the test will be ignored.
+A lib help you run test with conditions, else the test will be ignored.
+
+## Preamble
+This crate provide a workable solution for this [issue][original-issue] of rust-lang.
+
+Currently, the condition is checked on build-time not runtime and not perfect,
+because of this [issue][original-issue] of rust-lang.
+To avoid [known issue][known-issue] at this moment,
+please clean before running test.
+```bash
+cargo clean; SOME_VAR=true cargo test
+```
 
 ## Environment Variable
 Run test case when the environment variable is set.
-A solution for this [issue][original-issue] of rust-lang.
 
 ```rust
 #[cfg(test)]
@@ -148,3 +158,4 @@ mod tests {
 [doc-url]: https://docs.rs/test-with/latest/test_with/
 [original-issue]: https://github.com/rust-lang/rust/issues/68007
 [rust-pre-rfc]: https://internals.rust-lang.org/t/pre-rfc-provide-ignore-message-when-the-test-ignored/15904
+[known-issue]: https://github.com/yanganto/test-with/issues/18
