@@ -16,6 +16,8 @@ please clean before running test.
 cargo clean; SOME_VAR=true cargo test
 ```
 
+If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will add it for you.
+
 ## Environment Variable
 Run test case when the environment variable is set.
 
@@ -25,12 +27,14 @@ mod tests {
 
     // PWD environment variable exists
     #[test_with::env(PWD)]
+    #[test]
     fn test_works() {
         assert!(true);
     }
 
     // NOTHING environment variable does not exist
     #[test_with::env(NOTHING)]
+    #[test]
     fn test_ignored() {
         panic!("should be ignored")
     }
@@ -59,18 +63,21 @@ mod tests {
 
     // hostname exists
     #[test_with::file(/etc/hostname)]
+    #[test]
     fn test_works() {
         assert!(true);
     }
 
     // nothing file does not exist
     #[test_with::file(/etc/nothing)]
+    #[test]
     fn test_ignored() {
         panic!("should be ignored")
     }
 
     // etc exists
     #[test_with::path(/etc)]
+    #[test]
     fn test_works_for_path() {
         assert!(true);
     }
@@ -90,12 +97,14 @@ mod tests {
 
     // https service exists
     #[test_with::https(www.rust-lang.org)]
+    #[test]
     fn test_works() {
         assert!(true);
     }
 
     // There is no not.exist.com
     #[test_with::https(not.exist.com)]
+    #[test]
     fn test_ignored() {
         panic!("should be ignored")
     }
@@ -113,11 +122,13 @@ Run integration test case when the remote tcp socket is listening.
 #[cfg(test)]
 mod tests {
     #[test_with::tcp(8.8.8.8:53)]
+    #[test]
     fn test_works() {
         assert!(true);
     }
 
     #[test_with::tcp(193.194.195.196)]
+    #[test]
     fn test_ignored() {
         panic!("should be ignored")
     }
@@ -134,12 +145,14 @@ mod tests {
 
     // localhost is online
     #[test_with::icmp(127.0.0.1)]
+    #[test]
     fn test_works() {
         assert!(true);
     }
 
     // 193.194.195.196 is offline
     #[test_with::icmp(193.194.195.196)]
+    #[test]
     fn test_ignored() {
         panic!("should be ignored")
     }

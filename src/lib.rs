@@ -1,3 +1,7 @@
+//! `test_with` provides [macro@env], [macro@file], [macro@path], [macro@http], [macro@https],
+//! [macro@icmp], [macro@tcp] macros to help you run test case only with the condition is
+//! fulfilled.  If the `#[test]` is absent for the test case, `#[test_with]` will add it to the
+//! test case automatically.
 use std::{
     fs::metadata,
     net::{IpAddr, Ipv4Addr, TcpStream},
@@ -8,7 +12,18 @@ use proc_macro::TokenStream;
 use proc_macro_error::abort_call_site;
 use quote::quote;
 use regex::Regex;
-use syn::{parse_macro_input, ItemFn};
+use syn::{parse_macro_input, Attribute, ItemFn};
+
+fn has_test_attr(attrs: &Vec<Attribute>) -> bool {
+    for attr in attrs.iter() {
+        if let Some(ident) = attr.path.segments.first() {
+            if "test" == ident.ident.to_string() {
+                return true;
+            }
+        }
+    }
+    false
+}
 
 /// Run test case when the environment variable is set.
 /// ```
@@ -17,18 +32,21 @@ use syn::{parse_macro_input, ItemFn};
 ///
 ///     // PWD environment variable exists
 ///     #[test_with::env(PWD)]
+///     #[test]
 ///     fn test_works() {
 ///         assert!(true);
 ///     }
 ///
 ///     // NOTHING environment variable does not exist
 ///     #[test_with::env(NOTHING)]
+///     #[test]
 ///     fn test_ignored() {
 ///         panic!("should be ignored")
 ///     }
 ///
 ///     // NOT_SAYING environment variable does not exist
 ///     #[test_with::env(PWD, NOT_SAYING)]
+///     #[test]
 ///     fn test_ignored_too() {
 ///         panic!("should be ignored")
 ///     }
@@ -54,11 +72,25 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(var);
         }
     }
-    return if all_var_exist {
+    let has_test = has_test_attr(&attrs);
+    return if all_var_exist && has_test {
+        quote! {
+            #(#attrs)*
+            #vis #sig #block
+        }
+        .into()
+    } else if all_var_exist {
         quote! {
             #(#attrs)*
             #[test]
             #vis #sig #block
+        }
+        .into()
+    } else if has_test {
+        quote! {
+           #(#attrs)*
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
         }
         .into()
     } else {
@@ -79,18 +111,21 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///
 ///     // hostname exists
 ///     #[test_with::file(/etc/hostname)]
+///     #[test]
 ///     fn test_works() {
 ///         assert!(true);
 ///     }
 ///
 ///     // nothing file does not exist
 ///     #[test_with::file(/etc/nothing)]
+///     #[test]
 ///     fn test_ignored() {
 ///         panic!("should be ignored")
 ///     }
 ///
 ///     // hostname and hosts exist
 ///     #[test_with::file(/etc/hostname, /etc/hosts)]
+///     #[test]
 ///     fn test_works_too() {
 ///         assert!(true);
 ///     }
@@ -116,11 +151,25 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(file);
         }
     }
-    return if all_file_exist {
+    let has_test = has_test_attr(&attrs);
+    return if all_file_exist && has_test {
+        quote! {
+            #(#attrs)*
+            #vis #sig #block
+        }
+        .into()
+    } else if all_file_exist {
         quote! {
             #(#attrs)*
             #[test]
             #vis #sig #block
+        }
+        .into()
+    } else if has_test {
+        quote! {
+           #(#attrs)*
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
         }
         .into()
     } else {
@@ -141,18 +190,21 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///
 ///     // etc exists
 ///     #[test_with::path(/etc)]
+///     #[test]
 ///     fn test_works() {
 ///         assert!(true);
 ///     }
 ///
 ///     // nothing does not exist
 ///     #[test_with::path(/nothing)]
+///     #[test]
 ///     fn test_ignored() {
 ///         panic!("should be ignored")
 ///     }
 ///
 ///     // etc and tmp exist
 ///     #[test_with::path(/etc, /tmp)]
+///     #[test]
 ///     fn test_works_too() {
 ///         assert!(true);
 ///     }
@@ -178,11 +230,25 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(path);
         }
     }
-    return if all_path_exist {
+    let has_test = has_test_attr(&attrs);
+    return if all_path_exist && has_test {
+        quote! {
+            #(#attrs)*
+            #vis #sig #block
+        }
+        .into()
+    } else if all_path_exist {
         quote! {
             #(#attrs)*
             #[test]
             #vis #sig #block
+        }
+        .into()
+    } else if has_test {
+        quote! {
+           #(#attrs)*
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
         }
         .into()
     } else {
@@ -203,12 +269,14 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///
 ///     // http service exists
 ///     #[test_with::http(httpbin.org)]
+///     #[test]
 ///     fn test_works() {
 ///         assert!(true);
 ///     }
 ///
 ///     // There is no not.exist.com
 ///     #[test_with::http(not.exist.com)]
+///     #[test]
 ///     fn test_ignored() {
 ///         panic!("should be ignored")
 ///     }
@@ -235,11 +303,25 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(link);
         }
     }
-    return if all_link_exist {
+    let has_test = has_test_attr(&attrs);
+    return if all_link_exist && has_test {
+        quote! {
+            #(#attrs)*
+            #vis #sig #block
+        }
+        .into()
+    } else if all_link_exist {
         quote! {
             #(#attrs)*
             #[test]
             #vis #sig #block
+        }
+        .into()
+    } else if has_test {
+        quote! {
+           #(#attrs)*
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
         }
         .into()
     } else {
@@ -260,12 +342,14 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///
 ///     // https server exists
 ///     #[test_with::https(www.rust-lang.org)]
+///     #[test]
 ///     fn test_works() {
 ///         assert!(true);
 ///     }
 ///
 ///     // There is no not.exist.com
 ///     #[test_with::https(not.exist.com)]
+///     #[test]
 ///     fn test_ignored() {
 ///         panic!("should be ignored")
 ///     }
@@ -292,11 +376,25 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(link);
         }
     }
-    return if all_link_exist {
+    let has_test = has_test_attr(&attrs);
+    return if all_link_exist && has_test {
+        quote! {
+            #(#attrs)*
+            #vis #sig #block
+        }
+        .into()
+    } else if all_link_exist {
         quote! {
             #(#attrs)*
             #[test]
             #vis #sig #block
+        }
+        .into()
+    } else if has_test {
+        quote! {
+           #(#attrs)*
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
         }
         .into()
     } else {
@@ -328,12 +426,14 @@ fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntEr
 ///
 ///     // localhost is online
 ///     #[test_with::icmp(127.0.0.1)]
+///     #[test]
 ///     fn test_works() {
 ///         assert!(true);
 ///     }
 ///
 ///     // 193.194.195.196 is offline
 ///     #[test_with::icmp(193.194.195.196)]
+///     #[test]
 ///     fn test_ignored() {
 ///         panic!("should be ignored")
 ///     }
@@ -368,11 +468,25 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
             abort_call_site!("ip v4 address malformat")
         }
     }
-    return if all_ipv4_exist {
+    let has_test = has_test_attr(&attrs);
+    return if all_ipv4_exist && has_test {
+        quote! {
+            #(#attrs)*
+            #vis #sig #block
+        }
+        .into()
+    } else if all_ipv4_exist {
         quote! {
             #(#attrs)*
             #[test]
             #vis #sig #block
+        }
+        .into()
+    } else if has_test {
+        quote! {
+           #(#attrs)*
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
         }
         .into()
     } else {
@@ -394,12 +508,14 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///
 ///     // Google DNS is online
 ///     #[test_with::tcp(8.8.8.8:53)]
+///     #[test]
 ///     fn test_works() {
 ///         assert!(true);
 ///     }
 ///
 ///     // 193.194.195.196 is offline
 ///     #[test_with::tcp(193.194.195.196)]
+///     #[test]
 ///     fn test_ignored() {
 ///         panic!("should be ignored")
 ///     }
@@ -425,11 +541,25 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(socket);
         }
     }
-    return if all_socket_exist {
+    let has_test = has_test_attr(&attrs);
+    return if all_socket_exist && has_test {
+        quote! {
+            #(#attrs)*
+            #vis #sig #block
+        }
+        .into()
+    } else if all_socket_exist {
         quote! {
             #(#attrs)*
             #[test]
             #vis #sig #block
+        }
+        .into()
+    } else if has_test {
+        quote! {
+           #(#attrs)*
+           #[ignore = #ignore_msg ]
+           #vis #sig #block
         }
         .into()
     } else {
