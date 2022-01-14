@@ -16,8 +16,8 @@ use syn::{parse_macro_input, Attribute, ItemFn};
 
 fn has_test_attr(attrs: &Vec<Attribute>) -> bool {
     for attr in attrs.iter() {
-        if let Some(ident) = attr.path.segments.first() {
-            if "test" == ident.ident.to_string() {
+        if let Some(seg) = attr.path.segments.last() {
+            if "test" == seg.ident.to_string() {
                 return true;
             }
         }
@@ -73,6 +73,7 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
     }
     let has_test = has_test_attr(&attrs);
+
     return if all_var_exist && has_test {
         quote! {
             #(#attrs)*
