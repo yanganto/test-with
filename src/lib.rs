@@ -8,14 +8,12 @@ use std::{
     path::Path,
 };
 
-use crate::utils::has_test_attr;
-#[cfg(feature = "ign-msg")]
-use crate::utils::rewrite_fn_name_with_msg;
 use proc_macro::TokenStream;
 use proc_macro_error::abort_call_site;
-use quote::quote;
 use regex::Regex;
-use syn::{parse_macro_input, ItemFn};
+use syn::{parse_macro_input, ItemFn, ItemMod};
+
+use crate::utils::{fn_macro, is_module, mod_macro};
 
 mod utils;
 
@@ -46,24 +44,36 @@ mod utils;
 ///     }
 /// }
 /// ```
+/// or run all test cases for test module when the environment variable is set.
+/// ```
+/// #[test_with::env(PWD)]
+/// #[cfg(test)]
+/// mod tests {
+///
+///     #[test]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(stream as ItemFn);
-    #[cfg(feature = "ign-msg")]
-    let ItemFn {
-        attrs,
-        vis,
-        mut sig,
-        block,
-    } = input;
-    #[cfg(not(feature = "ign-msg"))]
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = input;
-    let attr_str = attr.to_string().replace(" ", "");
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_env_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_env_condition,
+        )
+    }
+}
+
+fn check_env_condition(attr_str: String) -> (bool, String) {
     let var_names: Vec<&str> = attr_str.split(',').collect();
     let mut all_var_exist = true;
     let mut ignore_msg = "because following variable not found:".to_string();
@@ -74,41 +84,7 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(var);
         }
     }
-    let has_test = has_test_attr(&attrs);
-
-    return if all_var_exist && has_test {
-        quote! {
-            #(#attrs)*
-            #vis #sig #block
-        }
-        .into()
-    } else if all_var_exist {
-        quote! {
-            #(#attrs)*
-            #[test]
-            #vis #sig #block
-        }
-        .into()
-    } else if has_test {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    } else {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[test]
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    };
+    (all_var_exist, ignore_msg)
 }
 
 /// Run test case when the file exist.
@@ -140,22 +116,22 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(stream as ItemFn);
-    #[cfg(feature = "ign-msg")]
-    let ItemFn {
-        attrs,
-        vis,
-        mut sig,
-        block,
-    } = input;
-    #[cfg(not(feature = "ign-msg"))]
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = input;
-    let attr_str = attr.to_string().replace(" ", "");
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_file_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_file_condition,
+        )
+    }
+}
+
+fn check_file_condition(attr_str: String) -> (bool, String) {
     let files: Vec<&str> = attr_str.split(',').collect();
     let mut all_file_exist = true;
     let mut ignore_msg = "because following file not found:".to_string();
@@ -166,40 +142,7 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(file);
         }
     }
-    let has_test = has_test_attr(&attrs);
-    return if all_file_exist && has_test {
-        quote! {
-            #(#attrs)*
-            #vis #sig #block
-        }
-        .into()
-    } else if all_file_exist {
-        quote! {
-            #(#attrs)*
-            #[test]
-            #vis #sig #block
-        }
-        .into()
-    } else if has_test {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    } else {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[test]
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    };
+    (all_file_exist, ignore_msg)
 }
 
 /// Run test case when the path(file or folder) exist.
@@ -231,22 +174,22 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(stream as ItemFn);
-    #[cfg(feature = "ign-msg")]
-    let ItemFn {
-        attrs,
-        vis,
-        mut sig,
-        block,
-    } = input;
-    #[cfg(not(feature = "ign-msg"))]
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = input;
-    let attr_str = attr.to_string().replace(" ", "");
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_path_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_path_condition,
+        )
+    }
+}
+
+fn check_path_condition(attr_str: String) -> (bool, String) {
     let paths: Vec<&str> = attr_str.split(',').collect();
     let mut all_path_exist = true;
     let mut ignore_msg = "because following path not found:".to_string();
@@ -257,40 +200,7 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(path);
         }
     }
-    let has_test = has_test_attr(&attrs);
-    return if all_path_exist && has_test {
-        quote! {
-            #(#attrs)*
-            #vis #sig #block
-        }
-        .into()
-    } else if all_path_exist {
-        quote! {
-            #(#attrs)*
-            #[test]
-            #vis #sig #block
-        }
-        .into()
-    } else if has_test {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    } else {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[test]
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    };
+    (all_path_exist, ignore_msg)
 }
 
 /// Run test case when the http service exist.
@@ -315,22 +225,22 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(stream as ItemFn);
-    #[cfg(feature = "ign-msg")]
-    let ItemFn {
-        attrs,
-        vis,
-        mut sig,
-        block,
-    } = input;
-    #[cfg(not(feature = "ign-msg"))]
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = input;
-    let attr_str = attr.to_string().replace(" ", "");
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_http_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_http_condition,
+        )
+    }
+}
+
+fn check_http_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
     let mut all_link_exist = true;
     let mut ignore_msg = "because following link not found:".to_string();
@@ -342,40 +252,7 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(link);
         }
     }
-    let has_test = has_test_attr(&attrs);
-    return if all_link_exist && has_test {
-        quote! {
-            #(#attrs)*
-            #vis #sig #block
-        }
-        .into()
-    } else if all_link_exist {
-        quote! {
-            #(#attrs)*
-            #[test]
-            #vis #sig #block
-        }
-        .into()
-    } else if has_test {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    } else {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[test]
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    };
+    (all_link_exist, ignore_msg)
 }
 
 /// Run test case when the https service exist.
@@ -400,22 +277,22 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(stream as ItemFn);
-    #[cfg(feature = "ign-msg")]
-    let ItemFn {
-        attrs,
-        vis,
-        mut sig,
-        block,
-    } = input;
-    #[cfg(not(feature = "ign-msg"))]
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = input;
-    let attr_str = attr.to_string().replace(" ", "");
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_https_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_https_condition,
+        )
+    }
+}
+
+fn check_https_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
     let mut all_link_exist = true;
     let mut ignore_msg = "because following link not found:".to_string();
@@ -427,49 +304,7 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(link);
         }
     }
-    let has_test = has_test_attr(&attrs);
-    return if all_link_exist && has_test {
-        quote! {
-            #(#attrs)*
-            #vis #sig #block
-        }
-        .into()
-    } else if all_link_exist {
-        quote! {
-            #(#attrs)*
-            #[test]
-            #vis #sig #block
-        }
-        .into()
-    } else if has_test {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    } else {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[test]
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    };
-}
-
-fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntError> {
-    Ok(IpAddr::V4(Ipv4Addr::new(
-        cap[1].parse::<u8>()?,
-        cap[2].parse::<u8>()?,
-        cap[3].parse::<u8>()?,
-        cap[4].parse::<u8>()?,
-    )))
+    (all_link_exist, ignore_msg)
 }
 
 /// Run test case when the server online.
@@ -496,22 +331,22 @@ fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntEr
 /// ```
 #[proc_macro_attribute]
 pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(stream as ItemFn);
-    #[cfg(feature = "ign-msg")]
-    let ItemFn {
-        attrs,
-        vis,
-        mut sig,
-        block,
-    } = input;
-    #[cfg(not(feature = "ign-msg"))]
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = input;
-    let attr_str = attr.to_string().replace(" ", "");
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_icmp_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_icmp_condition,
+        )
+    }
+}
+
+fn check_icmp_condition(attr_str: String) -> (bool, String) {
     let ipv4s: Vec<&str> = attr_str.split(',').collect();
     let ipv4_re = unsafe { Regex::new(r"^(\d+)\.(\d+)\.(\d+)\.(\d+)$").unwrap_unchecked() };
     let mut all_ipv4_exist = true;
@@ -531,40 +366,16 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
             abort_call_site!("ip v4 address malformat")
         }
     }
-    let has_test = has_test_attr(&attrs);
-    return if all_ipv4_exist && has_test {
-        quote! {
-            #(#attrs)*
-            #vis #sig #block
-        }
-        .into()
-    } else if all_ipv4_exist {
-        quote! {
-            #(#attrs)*
-            #[test]
-            #vis #sig #block
-        }
-        .into()
-    } else if has_test {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    } else {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[test]
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    };
+    (all_ipv4_exist, ignore_msg)
+}
+
+fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntError> {
+    Ok(IpAddr::V4(Ipv4Addr::new(
+        cap[1].parse::<u8>()?,
+        cap[2].parse::<u8>()?,
+        cap[3].parse::<u8>()?,
+        cap[4].parse::<u8>()?,
+    )))
 }
 
 /// Run test case when socket connected
@@ -590,22 +401,22 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(stream as ItemFn);
-    #[cfg(feature = "ign-msg")]
-    let ItemFn {
-        attrs,
-        vis,
-        mut sig,
-        block,
-    } = input;
-    #[cfg(not(feature = "ign-msg"))]
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = input;
-    let attr_str = attr.to_string().replace(" ", "");
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_tcp_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_tcp_condition,
+        )
+    }
+}
+
+fn check_tcp_condition(attr_str: String) -> (bool, String) {
     let sockets: Vec<&str> = attr_str.split(',').collect();
     let mut all_socket_exist = true;
     let mut ignore_msg = "because following socket not found:".to_string();
@@ -616,38 +427,5 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
             ignore_msg.push_str(socket);
         }
     }
-    let has_test = has_test_attr(&attrs);
-    return if all_socket_exist && has_test {
-        quote! {
-            #(#attrs)*
-            #vis #sig #block
-        }
-        .into()
-    } else if all_socket_exist {
-        quote! {
-            #(#attrs)*
-            #[test]
-            #vis #sig #block
-        }
-        .into()
-    } else if has_test {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    } else {
-        #[cfg(feature = "ign-msg")]
-        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
-        quote! {
-           #(#attrs)*
-           #[test]
-           #[ignore = #ignore_msg ]
-           #vis #sig #block
-        }
-        .into()
-    };
+    (all_socket_exist, ignore_msg)
 }

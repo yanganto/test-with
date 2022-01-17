@@ -72,3 +72,45 @@ mod tests {
         panic!("should be ignored")
     }
 }
+
+#[test_with::file(/etc/hostname)]
+pub mod workable_mod {
+    #[test]
+    fn test_works() {
+        assert!(true);
+    }
+}
+
+#[test_with::file(/etc/nothing)]
+pub mod ignore_pub_mod {
+    #[test]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
+
+#[test_with::file(/etc/nothing)]
+mod ignore_private_mod {
+    #[test]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
+
+#[test_with::file(/etc/nothing)]
+#[cfg(test)]
+pub mod ignore_pub_test_mod {
+    #[test]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
+
+#[test_with::file(/etc/nothing)]
+#[cfg(test)]
+mod ignore_private_test_mod {
+    #[test]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
