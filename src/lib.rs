@@ -8,36 +8,16 @@ use std::{
     path::Path,
 };
 
-use proc_macro::TokenStream;
+use crate::utils::has_test_attr;
 #[cfg(feature = "ign-msg")]
-use proc_macro2::{Ident, Span};
+use crate::utils::rewrite_fn_name_with_msg;
+use proc_macro::TokenStream;
 use proc_macro_error::abort_call_site;
 use quote::quote;
 use regex::Regex;
-#[cfg(feature = "ign-msg")]
-use syn::Signature;
-use syn::{parse_macro_input, Attribute, ItemFn};
+use syn::{parse_macro_input, ItemFn};
 
-fn has_test_attr(attrs: &Vec<Attribute>) -> bool {
-    for attr in attrs.iter() {
-        if let Some(seg) = attr.path.segments.last() {
-            if "test" == seg.ident.to_string() {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-#[cfg(feature = "ign-msg")]
-fn rewrite_fn_name_with_msg(sig: &mut Signature, msg: &String) {
-    let re = Regex::new(r"[^\w]").unwrap();
-    let new_fn_name = Ident::new(
-        &format!("{}__{}", sig.ident.to_string(), re.replace_all(msg, "_")),
-        Span::call_site(),
-    );
-    sig.ident = new_fn_name;
-}
+mod utils;
 
 /// Run test case when the environment variable is set.
 /// ```
@@ -533,7 +513,7 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     } = input;
     let attr_str = attr.to_string().replace(" ", "");
     let ipv4s: Vec<&str> = attr_str.split(',').collect();
-    let ipv4_re = Regex::new(r"^(\d+).(\d+).(\d+).(\d+)$").unwrap();
+    let ipv4_re = unsafe { Regex::new(r"^(\d+)\.(\d+)\.(\d+)\.(\d+)$").unwrap_unchecked() };
     let mut all_ipv4_exist = true;
     let mut ignore_msg = "because following ipv4 not found:".to_string();
     for ipv4 in ipv4s.iter() {
