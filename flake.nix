@@ -19,6 +19,10 @@
           cargo login $2
           cargo publish
         '';
+        featureTestScript = pkgs.writeShellScriptBin "feature-test" ''
+          cargo install cargo-hack
+          cargo hack test --each-feature --examples
+        '';
       in
       with pkgs;
       {
@@ -29,6 +33,7 @@
             pkg-config
 
             publishScript
+            featureTestScript
           ];
           SAYING = ''
             The value of a man resides in what he gives

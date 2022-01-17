@@ -9,9 +9,13 @@ use std::{
 };
 
 use proc_macro::TokenStream;
+#[cfg(feature = "ign-msg")]
+use proc_macro2::{Ident, Span};
 use proc_macro_error::abort_call_site;
 use quote::quote;
 use regex::Regex;
+#[cfg(feature = "ign-msg")]
+use syn::Signature;
 use syn::{parse_macro_input, Attribute, ItemFn};
 
 fn has_test_attr(attrs: &Vec<Attribute>) -> bool {
@@ -23,6 +27,16 @@ fn has_test_attr(attrs: &Vec<Attribute>) -> bool {
         }
     }
     false
+}
+
+#[cfg(feature = "ign-msg")]
+fn rewrite_fn_name_with_msg(sig: &mut Signature, msg: &String) {
+    let re = Regex::new(r"[^\w]").unwrap();
+    let new_fn_name = Ident::new(
+        &format!("{}__{}", sig.ident.to_string(), re.replace_all(msg, "_")),
+        Span::call_site(),
+    );
+    sig.ident = new_fn_name;
 }
 
 /// Run test case when the environment variable is set.
@@ -55,6 +69,14 @@ fn has_test_attr(attrs: &Vec<Attribute>) -> bool {
 #[proc_macro_attribute]
 pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as ItemFn);
+    #[cfg(feature = "ign-msg")]
+    let ItemFn {
+        attrs,
+        vis,
+        mut sig,
+        block,
+    } = input;
+    #[cfg(not(feature = "ign-msg"))]
     let ItemFn {
         attrs,
         vis,
@@ -88,6 +110,8 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else if has_test {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[ignore = #ignore_msg ]
@@ -95,6 +119,8 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[test]
@@ -135,6 +161,14 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as ItemFn);
+    #[cfg(feature = "ign-msg")]
+    let ItemFn {
+        attrs,
+        vis,
+        mut sig,
+        block,
+    } = input;
+    #[cfg(not(feature = "ign-msg"))]
     let ItemFn {
         attrs,
         vis,
@@ -167,6 +201,8 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else if has_test {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[ignore = #ignore_msg ]
@@ -174,6 +210,8 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[test]
@@ -214,6 +252,14 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as ItemFn);
+    #[cfg(feature = "ign-msg")]
+    let ItemFn {
+        attrs,
+        vis,
+        mut sig,
+        block,
+    } = input;
+    #[cfg(not(feature = "ign-msg"))]
     let ItemFn {
         attrs,
         vis,
@@ -246,6 +292,8 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else if has_test {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[ignore = #ignore_msg ]
@@ -253,6 +301,8 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[test]
@@ -286,6 +336,14 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as ItemFn);
+    #[cfg(feature = "ign-msg")]
+    let ItemFn {
+        attrs,
+        vis,
+        mut sig,
+        block,
+    } = input;
+    #[cfg(not(feature = "ign-msg"))]
     let ItemFn {
         attrs,
         vis,
@@ -319,6 +377,8 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else if has_test {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[ignore = #ignore_msg ]
@@ -326,6 +386,8 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[test]
@@ -359,6 +421,14 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as ItemFn);
+    #[cfg(feature = "ign-msg")]
+    let ItemFn {
+        attrs,
+        vis,
+        mut sig,
+        block,
+    } = input;
+    #[cfg(not(feature = "ign-msg"))]
     let ItemFn {
         attrs,
         vis,
@@ -392,6 +462,8 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else if has_test {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[ignore = #ignore_msg ]
@@ -399,6 +471,8 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[test]
@@ -443,6 +517,14 @@ fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntEr
 #[proc_macro_attribute]
 pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as ItemFn);
+    #[cfg(feature = "ign-msg")]
+    let ItemFn {
+        attrs,
+        vis,
+        mut sig,
+        block,
+    } = input;
+    #[cfg(not(feature = "ign-msg"))]
     let ItemFn {
         attrs,
         vis,
@@ -484,6 +566,8 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else if has_test {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[ignore = #ignore_msg ]
@@ -491,6 +575,8 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[test]
@@ -525,6 +611,14 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as ItemFn);
+    #[cfg(feature = "ign-msg")]
+    let ItemFn {
+        attrs,
+        vis,
+        mut sig,
+        block,
+    } = input;
+    #[cfg(not(feature = "ign-msg"))]
     let ItemFn {
         attrs,
         vis,
@@ -557,6 +651,8 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else if has_test {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[ignore = #ignore_msg ]
@@ -564,6 +660,8 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
         }
         .into()
     } else {
+        #[cfg(feature = "ign-msg")]
+        rewrite_fn_name_with_msg(&mut sig, &ignore_msg);
         quote! {
            #(#attrs)*
            #[test]
