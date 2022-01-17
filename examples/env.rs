@@ -25,3 +25,45 @@ mod tests {
         panic!("should be ignored")
     }
 }
+
+#[test_with::env(PWD)]
+pub mod workable_mod {
+    #[test]
+    fn test_works() {
+        assert!(true);
+    }
+}
+
+#[test_with::env(NOTHING)]
+pub mod ignore_pub_mod {
+    #[test]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
+
+#[test_with::env(NOTHING)]
+mod ignore_private_mod {
+    #[test]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
+
+#[test_with::env(NOTHING)]
+#[cfg(test)]
+pub mod ignore_pub_test_mod {
+    #[test]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}
+
+#[test_with::env(NOTHING)]
+#[cfg(test)]
+mod ignore_private_test_mod {
+    #[test]
+    fn test_ignored() {
+        panic!("should be ignored")
+    }
+}

@@ -40,6 +40,18 @@ mod tests {
     }
 }
 ```
+or run all test cases for test module when the environment variable is set.
+```
+#[test_with::env(PWD)]
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_works() {
+        assert!(true);
+    }
+}
+```
 
 Result of `cargo test`
 ```text
