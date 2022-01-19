@@ -29,5 +29,6 @@ jobs:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: main
           VALIDATE_RUST_2021: true
-          VALIDATE_RUST_CLIPPY: true
+          # Clippy is not updated for Rust 1.58, temp disable
+          # VALIDATE_RUST_CLIPPY: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
