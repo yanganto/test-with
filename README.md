@@ -41,7 +41,7 @@ mod tests {
 }
 ```
 or run all test cases for test module when the environment variable is set.
-```
+```rust
 #[test_with::env(PWD)]
 #[cfg(test)]
 mod tests {
