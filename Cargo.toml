@@ -20,6 +20,8 @@ syn = { version = "1.0.85", features = [ "full" ] }
 reqwest = { version = "0.11", features = ["blocking"] }
 ping = "0.3.0"
 regex = "1"
+tokio = { version = "1.15.0", features = ["rt", "macros"], optional = true }
 
 [features]
 ign-msg = []
+example = ["tokio"]
