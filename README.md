@@ -22,22 +22,18 @@ If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will 
 Run test case when the environment variable is set.
 
 ```rust
-#[cfg(test)]
-mod tests {
+// PWD environment variable exists
+#[test_with::env(PWD)]
+#[test]
+fn test_works() {
+    assert!(true);
+}
 
-    // PWD environment variable exists
-    #[test_with::env(PWD)]
-    #[test]
-    fn test_works() {
-        assert!(true);
-    }
-
-    // NOTHING environment variable does not exist
-    #[test_with::env(NOTHING)]
-    #[test]
-    fn test_ignored() {
-        panic!("should be ignored")
-    }
+// NOTHING environment variable does not exist
+#[test_with::env(NOTHING)]
+#[test]
+fn test_ignored() {
+    panic!("should be ignored")
 }
 ```
 or run all test cases for test module when the environment variable is set.
@@ -70,29 +66,25 @@ Run test case when the file or folder exist.  This is good for testing with data
 If you want to check the folder exist or not, please use `path`.
 
 ```rust
-#[cfg(test)]
-mod tests {
+// hostname exists
+#[test_with::file(/etc/hostname)]
+#[test]
+fn test_works() {
+    assert!(true);
+}
 
-    // hostname exists
-    #[test_with::file(/etc/hostname)]
-    #[test]
-    fn test_works() {
-        assert!(true);
-    }
+// nothing file does not exist
+#[test_with::file(/etc/nothing)]
+#[test]
+fn test_ignored() {
+    panic!("should be ignored")
+}
 
-    // nothing file does not exist
-    #[test_with::file(/etc/nothing)]
-    #[test]
-    fn test_ignored() {
-        panic!("should be ignored")
-    }
-
-    // etc exists
-    #[test_with::path(/etc)]
-    #[test]
-    fn test_works_for_path() {
-        assert!(true);
-    }
+// etc exists
+#[test_with::path(/etc)]
+#[test]
+fn test_works_for_path() {
+    assert!(true);
 }
 ```
 
@@ -104,22 +96,18 @@ you can write it with multiple file/path,
 Run test case when the http/https service available.  This is good for integration testing.
 
 ```rust
-#[cfg(test)]
-mod tests {
+// https service exists
+#[test_with::https(www.rust-lang.org)]
+#[test]
+fn test_works() {
+    assert!(true);
+}
 
-    // https service exists
-    #[test_with::https(www.rust-lang.org)]
-    #[test]
-    fn test_works() {
-        assert!(true);
-    }
-
-    // There is no not.exist.com
-    #[test_with::https(not.exist.com)]
-    #[test]
-    fn test_ignored() {
-        panic!("should be ignored")
-    }
+// There is no not.exist.com
+#[test_with::https(not.exist.com)]
+#[test]
+fn test_ignored() {
+    panic!("should be ignored")
 }
 ```
 
@@ -131,19 +119,16 @@ you can write it with multiple service,
 Run integration test case when the remote tcp socket is listening.
 
 ```rust
-#[cfg(test)]
-mod tests {
-    #[test_with::tcp(8.8.8.8:53)]
-    #[test]
-    fn test_works() {
-        assert!(true);
-    }
+#[test_with::tcp(8.8.8.8:53)]
+#[test]
+fn test_works() {
+    assert!(true);
+}
 
-    #[test_with::tcp(193.194.195.196)]
-    #[test]
-    fn test_ignored() {
-        panic!("should be ignored")
-    }
+#[test_with::tcp(193.194.195.196)]
+#[test]
+fn test_ignored() {
+    panic!("should be ignored")
 }
 ```
 
@@ -152,22 +137,40 @@ Run integration test case when the remote server online.
 **Please note the user running test case should have capability to open socket**.
 
 ```rust
-#[cfg(test)]
-mod tests {
+// localhost is online
+#[test_with::icmp(127.0.0.1)]
+#[test]
+fn test_works() {
+    assert!(true);
+}
 
-    // localhost is online
-    #[test_with::icmp(127.0.0.1)]
-    #[test]
-    fn test_works() {
-        assert!(true);
-    }
+// 193.194.195.196 is offline
+#[test_with::icmp(193.194.195.196)]
+#[test]
+fn test_ignored() {
+    panic!("should be ignored")
+}
+```
 
-    // 193.194.195.196 is offline
-    #[test_with::icmp(193.194.195.196)]
-    #[test]
-    fn test_ignored() {
-        panic!("should be ignored")
-    }
+## User/Group condition
+Run integration test case when the user is specific user or in specific group
+```rust
+#[test_with::root()]
+#[test]
+fn test_ignored() {
+    panic!("should be ignored")
+}
+
+#[test_with::group(avengers)]
+#[test]
+fn test_ignored2() {
+    panic!("should be ignored")
+}
+
+#[test_with::user(spider)]
+#[test]
+fn test_ignored3() {
+    panic!("should be ignored")
 }
 ```
 
