@@ -7,4 +7,10 @@ mod tests {
     fn test_ignored() {
         panic!("should be ignored")
     }
+
+    #[test_with::group(avengers)]
+    #[test]
+    fn test_ignored2() {
+        panic!("should be ignored")
+    }
 }
