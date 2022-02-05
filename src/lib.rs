@@ -521,3 +521,45 @@ fn check_group_condition(group_name: String) -> (bool, String) {
         format!("because this case should run user in group {}", group_name),
     )
 }
+
+/// Run test case when runner is specific user
+///
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // Only works with user
+///     #[test_with::user(spider)]
+///     #[test]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_user_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_user_condition,
+        )
+    }
+}
+
+fn check_user_condition(user_name: String) -> (bool, String) {
+    let is_user = match users::get_current_username() {
+        Some(uname) => uname.to_string_lossy() == user_name,
+        None => false,
+    };
+    (
+        is_user,
+        format!("because this case should run with user {}", user_name),
+    )
+}

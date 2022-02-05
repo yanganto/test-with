@@ -13,4 +13,10 @@ mod tests {
     fn test_ignored2() {
         panic!("should be ignored")
     }
+
+    #[test_with::user(spider)]
+    #[test]
+    fn test_ignored3() {
+        panic!("should be ignored")
+    }
 }
