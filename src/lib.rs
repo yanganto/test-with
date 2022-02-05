@@ -468,3 +468,56 @@ fn check_root_condition(_attr_str: String) -> (bool, String) {
         "because this case should run with root".into(),
     )
 }
+
+/// Run test case when runner in group
+///
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // Only works with group avengers
+///     #[test_with::group(avengers)]
+///     #[test]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_group_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_group_condition,
+        )
+    }
+}
+
+fn check_group_condition(group_name: String) -> (bool, String) {
+    let current_user_id = users::get_current_uid();
+
+    let in_group = match users::get_user_by_uid(current_user_id) {
+        Some(user) => {
+            let mut in_group = false;
+            for group in user.groups().expect("user not found") {
+                if in_group {
+                    break;
+                }
+                in_group |= group.name().to_string_lossy() == group_name;
+            }
+            in_group
+        }
+        None => false,
+    };
+    (
+        in_group,
+        format!("because this case should run user in group {}", group_name),
+    )
+}
