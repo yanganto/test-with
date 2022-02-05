@@ -429,3 +429,42 @@ fn check_tcp_condition(attr_str: String) -> (bool, String) {
     }
     (all_socket_exist, ignore_msg)
 }
+
+/// Run test case when runner is root
+///
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // Only works with root account
+///     #[test_with::root()]
+///     #[test]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_root_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_root_condition,
+        )
+    }
+}
+
+fn check_root_condition(_attr_str: String) -> (bool, String) {
+    let current_user_id = users::get_current_uid();
+    (
+        current_user_id == 0,
+        "because this case should run with root".into(),
+    )
+}
