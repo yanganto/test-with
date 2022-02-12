@@ -18,6 +18,9 @@ cargo clean; SOME_VAR=true cargo test
 
 If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will add it for you.
 
+Currently, the ignore message does not show, such that the feature `ign-msg` can be used,
+and the name of ignored test case will be rewritten, such that you can easier to know why the test is ignored.
+
 ## Environment Variable
 Run test case when the environment variable is set.
 
