@@ -12,6 +12,7 @@ use proc_macro::TokenStream;
 use proc_macro_error::abort_call_site;
 use regex::Regex;
 use syn::{parse_macro_input, ItemFn, ItemMod};
+use sysinfo::{System, SystemExt};
 
 use crate::utils::{fn_macro, is_module, mod_macro};
 
@@ -561,5 +562,53 @@ fn check_user_condition(user_name: String) -> (bool, String) {
     (
         is_user,
         format!("because this case should run with user {}", user_name),
+    )
+}
+
+/// Run test case when memory size enough
+///
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // Only works with enough memory size
+///     #[test_with::mem(100GB)]
+///     #[test]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_mem_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_mem_condition,
+        )
+    }
+}
+
+fn check_mem_condition(mem_size_str: String) -> (bool, String) {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    let mem_size = match byte_unit::Byte::from_str(format!("{} KB", sys.total_memory())) {
+        Ok(b) => b,
+        Err(_) => abort_call_site!("memory size description is not correct"),
+    };
+    let mem_size_limitation = match byte_unit::Byte::from_str(&mem_size_str) {
+        Ok(b) => b,
+        Err(_) => abort_call_site!("system memory size can not get"),
+    };
+    (
+        mem_size >= mem_size_limitation,
+        format!("because the memory less than {}", mem_size_str),
     )
 }
