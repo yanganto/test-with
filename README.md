@@ -177,10 +177,16 @@ fn test_ignored3() {
 }
 ```
 
-## Memory condition
-Run integration test case when the memory is enough
+## Memory/Swap condition
+Run integration test case when the memory/swap is enough
 ```rust
 #[test_with::mem(999GB)]
+#[test]
+fn test_ignored() {
+    panic!("should be ignored")
+}
+
+#[test_with::swap(999GB)]
 #[test]
 fn test_ignored() {
     panic!("should be ignored")
