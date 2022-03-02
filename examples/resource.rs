@@ -4,7 +4,13 @@ fn main() {}
 mod tests {
     #[test_with::mem(999GB)]
     #[test]
-    fn test_ignored() {
+    fn mem_test_ignored() {
+        panic!("should be ignored")
+    }
+
+    #[test_with::swap(999GB)]
+    #[test]
+    fn swap_test_ignored() {
         panic!("should be ignored")
     }
 }

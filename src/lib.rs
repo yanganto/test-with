@@ -612,3 +612,51 @@ fn check_mem_condition(mem_size_str: String) -> (bool, String) {
         format!("because the memory less than {}", mem_size_str),
     )
 }
+
+/// Run test case when swap size enough
+///
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // Only works with enough swap size
+///     #[test_with::swap(100GB)]
+///     #[test]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_swap_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_swap_condition,
+        )
+    }
+}
+
+fn check_swap_condition(swap_size_str: String) -> (bool, String) {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    let swap_size = match byte_unit::Byte::from_str(format!("{} KB", sys.total_swap())) {
+        Ok(b) => b,
+        Err(_) => abort_call_site!("swap size description is not correct"),
+    };
+    let swap_size_limitation = match byte_unit::Byte::from_str(&swap_size_str) {
+        Ok(b) => b,
+        Err(_) => abort_call_site!("system swap size can not get"),
+    };
+    (
+        swap_size >= swap_size_limitation,
+        format!("because the swap less than {}", swap_size_str),
+    )
+}
