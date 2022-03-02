@@ -18,7 +18,7 @@ cargo clean; SOME_VAR=true cargo test
 
 If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will add it for you.
 
-Currently, the ignore message does not show, such that the feature `ign-msg` can be used,
+Before Rust version `1.61`, the ignore message does not show, such that the feature `ign-msg` can be used,
 and the name of ignored test case will be rewritten, such that you can easier to know why the test is ignored.
 
 ## Environment Variable
@@ -177,9 +177,18 @@ fn test_ignored3() {
 }
 ```
 
+## Memory condition
+Run integration test case when the memory is enough
+```rust
+#[test_with::mem(999GB)]
+#[test]
+fn test_ignored() {
+    panic!("should be ignored")
+}
+```
+
 ## Relating issues
 * [Solve this in runtime][original-issue]
-* [provide ignore message in cargo][rust-pre-rfc]
 
 [crates-badge]: https://img.shields.io/crates/v/test-with.svg
 [crate-url]: https://crates.io/crates/test-with
