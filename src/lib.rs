@@ -649,14 +649,99 @@ fn check_swap_condition(swap_size_str: String) -> (bool, String) {
     sys.refresh_all();
     let swap_size = match byte_unit::Byte::from_str(format!("{} KB", sys.total_swap())) {
         Ok(b) => b,
-        Err(_) => abort_call_site!("swap size description is not correct"),
+        Err(_) => abort_call_site!("Swap size description is not correct"),
     };
     let swap_size_limitation = match byte_unit::Byte::from_str(&swap_size_str) {
         Ok(b) => b,
-        Err(_) => abort_call_site!("system swap size can not get"),
+        Err(_) => abort_call_site!("Can not get system swap size"),
     };
     (
         swap_size >= swap_size_limitation,
         format!("because the swap less than {}", swap_size_str),
+    )
+}
+
+/// Run test case when cpu core enough
+///
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // Only works with enough cpu core
+///     #[test_with::cpu_core(32)]
+///     #[test]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_cpu_core_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_cpu_core_condition,
+        )
+    }
+}
+
+fn check_cpu_core_condition(core_limitation_str: String) -> (bool, String) {
+    (
+        match core_limitation_str.parse::<usize>() {
+            Ok(c) => num_cpus::get() >= c,
+            Err(_) => abort_call_site!("core limitation is incorrect"),
+        },
+        format!("because the cpu core less than {}", core_limitation_str),
+    )
+}
+
+/// Run test case when physical cpu core enough
+///
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // Only works with enough cpu core
+///     #[test_with::phy_core(32)]
+///     #[test]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn phy_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_cpu_core_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_phy_core_condition,
+        )
+    }
+}
+
+fn check_phy_core_condition(core_limitation_str: String) -> (bool, String) {
+    (
+        match core_limitation_str.parse::<usize>() {
+            Ok(c) => num_cpus::get_physical() >= c,
+            Err(_) => abort_call_site!("physical core limitation is incorrect"),
+        },
+        format!(
+            "because the physical cpu core less than {}",
+            core_limitation_str
+        ),
     )
 }
