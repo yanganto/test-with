@@ -910,6 +910,7 @@ name = "test-with"
 version = "0.6.1"
 dependencies = [
  "byte-unit",
+ "num_cpus",
  "ping",
  "proc-macro-error",
  "proc-macro2",

@@ -177,18 +177,31 @@ fn test_ignored3() {
 }
 ```
 
-## Memory/Swap condition
+## CPU/Memory/Swap condition
 Run integration test case when the memory/swap is enough
 ```rust
+#[test_with::cpu_core(32)]
+#[test]
+fn test_ignored_by_cpu_core() {
+    panic!("should be ignored")
+}
+
+
+#[test_with::phy_core(32)]
+#[test]
+fn test_ignored_by_physical_cpu_core() {
+    panic!("should be ignored")
+}
+
 #[test_with::mem(999GB)]
 #[test]
-fn test_ignored() {
+fn test_ignored_by_mem() {
     panic!("should be ignored")
 }
 
 #[test_with::swap(999GB)]
 #[test]
-fn test_ignored() {
+fn test_ignored_by_swap() {
     panic!("should be ignored")
 }
 ```
