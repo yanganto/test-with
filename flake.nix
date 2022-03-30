@@ -13,7 +13,7 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        rust = pkgs.rust-bin.stable.latest.default;
+        rust = pkgs.rust-bin.nightly."2022-03-30".default;
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
           cd $1
           cargo login $2

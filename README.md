@@ -18,7 +18,8 @@ cargo clean; SOME_VAR=true cargo test
 
 If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will add it for you.
 
-Before Rust version `1.61`, the ignore message does not show, such that the feature `ign-msg` can be used,
+Rust version `1.61` of stable channel or `2022-03-30` of nightly channel will show the ignore message.
+If the ignore message does not show in the Rust version you used, the feature `ign-msg` can be used to work around.
 and the name of ignored test case will be rewritten, such that you can easier to know why the test is ignored.
 
 ## Environment Variable
@@ -39,6 +40,16 @@ fn test_ignored() {
     panic!("should be ignored")
 }
 ```
+
+Result of `cargo test`
+```text
+running 2 tests
+test tests::test_ignored ... ignored, because following variable not found: NOTHING
+test tests::test_works ... ok
+
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
 or run all test cases for test module when the environment variable is set.
 ```rust
 #[test_with::env(PWD)]
@@ -50,15 +61,6 @@ mod tests {
         assert!(true);
     }
 }
-```
-
-Result of `cargo test`
-```text
-running 2 tests
-test tests::test_ignored ... ignored
-test tests::test_works ... ok
-
-test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
 If the test depends on more than one environment variables,
