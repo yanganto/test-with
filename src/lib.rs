@@ -77,7 +77,7 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_env_condition(attr_str: String) -> (bool, String) {
     let var_names: Vec<&str> = attr_str.split(',').collect();
     let mut all_var_exist = true;
-    let mut ignore_msg = "because following variable not found:".to_string();
+    let mut ignore_msg = "because variables not found:".to_string();
     for var in var_names.iter() {
         if std::env::var(var).is_err() {
             all_var_exist = false;
@@ -135,7 +135,7 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_file_condition(attr_str: String) -> (bool, String) {
     let files: Vec<&str> = attr_str.split(',').collect();
     let mut all_file_exist = true;
-    let mut ignore_msg = "because following file not found:".to_string();
+    let mut ignore_msg = "because variables not found:".to_string();
     for file in files.iter() {
         if !Path::new(file).is_file() {
             all_file_exist = false;
@@ -193,7 +193,7 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_path_condition(attr_str: String) -> (bool, String) {
     let paths: Vec<&str> = attr_str.split(',').collect();
     let mut all_path_exist = true;
-    let mut ignore_msg = "because following path not found:".to_string();
+    let mut ignore_msg = "because path not found:".to_string();
     for path in paths.iter() {
         if metadata(path).is_err() {
             all_path_exist = false;
@@ -244,7 +244,7 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_http_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
     let mut all_link_exist = true;
-    let mut ignore_msg = "because following link not found:".to_string();
+    let mut ignore_msg = "because link not found:".to_string();
     let client = reqwest::blocking::Client::new();
     for link in links.iter() {
         if client.head(&format!("http://{}", link)).send().is_err() {
@@ -296,7 +296,7 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_https_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
     let mut all_link_exist = true;
-    let mut ignore_msg = "because following link not found:".to_string();
+    let mut ignore_msg = "because link not found:".to_string();
     let client = reqwest::blocking::Client::new();
     for link in links.iter() {
         if client.head(&format!("https://{}", link)).send().is_err() {
@@ -351,7 +351,7 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
     let ipv4s: Vec<&str> = attr_str.split(',').collect();
     let ipv4_re = unsafe { Regex::new(r"^(\d+)\.(\d+)\.(\d+)\.(\d+)$").unwrap_unchecked() };
     let mut all_ipv4_exist = true;
-    let mut ignore_msg = "because following ipv4 not found:".to_string();
+    let mut ignore_msg = "because ipv4 not found:".to_string();
     for ipv4 in ipv4s.iter() {
         if let Some(cap) = ipv4_re.captures(ipv4) {
             if let Ok(addr_v4) = parse_ipv4_addre(cap) {
@@ -420,7 +420,7 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_tcp_condition(attr_str: String) -> (bool, String) {
     let sockets: Vec<&str> = attr_str.split(',').collect();
     let mut all_socket_exist = true;
-    let mut ignore_msg = "because following socket not found:".to_string();
+    let mut ignore_msg = "because socket not found:".to_string();
     for socket in sockets.iter() {
         if TcpStream::connect(socket).is_err() {
             all_socket_exist = false;
