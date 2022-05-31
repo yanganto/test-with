@@ -446,6 +446,7 @@ fn check_tcp_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(not(target_os = "windows"))]
 pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -461,7 +462,7 @@ pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
         )
     }
 }
-
+#[cfg(not(target_os = "windows"))]
 fn check_root_condition(_attr_str: String) -> (bool, String) {
     let current_user_id = users::get_current_uid();
     (
@@ -485,6 +486,7 @@ fn check_root_condition(_attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(not(target_os = "windows"))]
 pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -500,7 +502,7 @@ pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
         )
     }
 }
-
+#[cfg(not(target_os = "windows"))]
 fn check_group_condition(group_name: String) -> (bool, String) {
     let current_user_id = users::get_current_uid();
 
@@ -538,6 +540,7 @@ fn check_group_condition(group_name: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(not(target_os = "windows"))]
 pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -553,7 +556,7 @@ pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
         )
     }
 }
-
+#[cfg(not(target_os = "windows"))]
 fn check_user_condition(user_name: String) -> (bool, String) {
     let is_user = match users::get_current_username() {
         Some(uname) => uname.to_string_lossy() == user_name,
