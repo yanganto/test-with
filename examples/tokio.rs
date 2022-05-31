@@ -1,9 +1,12 @@
-#[cfg(feature = "example")]
+use tokio;
+
 #[tokio::main]
 async fn main() {}
 
-#[cfg(feature = "example")]
-#[tokio::test]
-async fn my_test() {
-    assert!(true);
+#[cfg(test)]
+mod tokio_tests {
+    #[tokio::test]
+    async fn my_test() {
+        assert!(true);
+    }
 }
