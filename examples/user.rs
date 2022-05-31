@@ -1,6 +1,7 @@
 fn main() {}
 
 #[cfg(test)]
+#[cfg(not(target_os = "windows"))]
 mod tests {
     #[test_with::root()]
     #[test]
