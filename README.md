@@ -3,15 +3,26 @@
 [![MIT licensed][mit-badge]][mit-url]
 [![Docs][doc-badge]][doc-url]
 
-A lib help you run test with conditions, else the test will be ignored.
+A lib help you run test with conditions, else the test will be ignored with clear message.
 
 ## Preamble
-This crate provide a workable solution for this [issue][original-issue] of rust-lang.
+It is good to use this crate in dev dependency as following
+```toml
+[dev-dependencies]
+test-with = "*"
+```
 
-Currently, the condition is checked on build-time not runtime and not perfect,
+If you want the dependency smaller, you can disable default feature and use specific one, for example for the net feature
+```toml
+[dev-dependencies]
+test-with = { version = "*", default-features = false, features = ["net"] }
+```
+The features you can use are `net`, `resource`, `user`.
+
+Currently, the condition is checked on build-time not runtime and not perfect and good for most develop scenario,
 because of this [issue][original-issue] of rust-lang.
-To avoid [known issue][known-issue] at this moment,
-please clean before running test.
+
+To avoid [known issue][known-issue] in some corner case, please clean before running test.
 ```bash
 cargo clean; SOME_VAR=true cargo test
 ```
