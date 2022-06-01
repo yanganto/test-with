@@ -28,6 +28,7 @@ jobs:
         run: nix develop -c 'update-dependency'
 
       - name: Create commit
+        id: commit
         if: failure() && steps.update-dependency.outcome != 'success'
         run: |
           git config user.name 'Antonio Yang'
@@ -36,6 +37,7 @@ jobs:
           git commit -m "Update dependency"
 
       - name: Create Pull Request
+        if: failure() && steps.update-dependency.outcome != 'success' && steps.commit.outcome == 'success'
         uses: peter-evans/create-pull-request@v4
         with:
           reviewers: yanganto
