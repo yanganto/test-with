@@ -12,7 +12,8 @@ It is good to use this crate in dev dependency as following
 test-with = "*"
 ```
 
-If you want the dependency smaller, you can disable default feature and use specific one, for example for the net feature
+If you want the dependency smaller with a shorter compiling time, you can disable default features and use specific one.
+For example, if you only checking a remote server, you can use the net feature as the following.
 ```toml
 [dev-dependencies]
 test-with = { version = "*", default-features = false, features = ["net"] }
