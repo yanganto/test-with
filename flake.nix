@@ -23,9 +23,8 @@
           dr ./Cargo.toml
           if [ -f "Cargo.toml.old" ]; then
             rm Cargo.toml.old
-            exit 0
+            exit 1
           fi
-          exit 1
         '';
         featureTestScript = pkgs.writeShellScriptBin "feature-test" ''
           cargo run --no-default-features --features=net --example=net
