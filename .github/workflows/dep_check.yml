@@ -26,15 +26,20 @@ jobs:
       - name: Update dependency
         run: nix develop -c 'update-dependency'
 
-      - uses: actions/checkout@v3
+  make_pr:
+    needs: update_dependency
+    name: Make PR for updating dependency
+    runs-on: ubuntu-latest
 
-      - name: Commit
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create commit
         run: |
           git config user.name 'Antonio Yang'
           git config user.email 'yanganto@gmail.com'
           git add Cargo.toml
           git commit -m "Update dependency"
-
-      - uses: peter-evans/create-pull-request@v4
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
         with:
           reviewers: yanganto
