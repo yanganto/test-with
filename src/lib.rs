@@ -1,18 +1,19 @@
 //! `test_with` provides [macro@env], [macro@file], [macro@path], [macro@http], [macro@https],
-//! [macro@icmp], [macro@tcp] macros to help you run test case only with the condition is
+//! [macro@icmp], [macro@tcp], [macro@root], [macro@group], [macro@user], [macro@mem], [macro@swap],
+//! [macro@cpu_core], [macro@phy_core]  macros to help you run test case only with the condition is
 //! fulfilled.  If the `#[test]` is absent for the test case, `#[test_with]` will add it to the
 //! test case automatically.
-use std::{
-    fs::metadata,
-    net::{IpAddr, Ipv4Addr, TcpStream},
-    path::Path,
-};
+use std::{fs::metadata, path::Path};
+
+#[cfg(feature = "net")]
+use std::net::{IpAddr, Ipv4Addr, TcpStream};
 
 use proc_macro::TokenStream;
+#[cfg(any(feature = "resource", feature = "net"))]
 use proc_macro_error::abort_call_site;
-use regex::Regex;
 use syn::{parse_macro_input, ItemFn, ItemMod};
-use sysinfo::{System, SystemExt};
+#[cfg(feature = "resource")]
+use sysinfo::SystemExt;
 
 use crate::utils::{fn_macro, is_module, mod_macro};
 
@@ -225,6 +226,7 @@ fn check_path_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "net")]
 pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -241,6 +243,7 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
+#[cfg(feature = "net")]
 fn check_http_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
     let mut all_link_exist = true;
@@ -277,6 +280,7 @@ fn check_http_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "net")]
 pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -293,6 +297,7 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
+#[cfg(feature = "net")]
 fn check_https_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
     let mut all_link_exist = true;
@@ -331,6 +336,7 @@ fn check_https_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "net")]
 pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -347,9 +353,10 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
+#[cfg(feature = "net")]
 fn check_icmp_condition(attr_str: String) -> (bool, String) {
     let ipv4s: Vec<&str> = attr_str.split(',').collect();
-    let ipv4_re = unsafe { Regex::new(r"^(\d+)\.(\d+)\.(\d+)\.(\d+)$").unwrap_unchecked() };
+    let ipv4_re = unsafe { regex::Regex::new(r"^(\d+)\.(\d+)\.(\d+)\.(\d+)$").unwrap_unchecked() };
     let mut all_ipv4_exist = true;
     let mut ignore_msg = "because ipv4 not found:".to_string();
     for ipv4 in ipv4s.iter() {
@@ -370,6 +377,7 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
     (all_ipv4_exist, ignore_msg)
 }
 
+#[cfg(feature = "net")]
 fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntError> {
     Ok(IpAddr::V4(Ipv4Addr::new(
         cap[1].parse::<u8>()?,
@@ -401,6 +409,7 @@ fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntEr
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "net")]
 pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -417,6 +426,7 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
+#[cfg(feature = "net")]
 fn check_tcp_condition(attr_str: String) -> (bool, String) {
     let sockets: Vec<&str> = attr_str.split(',').collect();
     let mut all_socket_exist = true;
@@ -446,6 +456,7 @@ fn check_tcp_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "user")]
 #[cfg(not(target_os = "windows"))]
 pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -462,6 +473,8 @@ pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
         )
     }
 }
+
+#[cfg(feature = "user")]
 #[cfg(not(target_os = "windows"))]
 fn check_root_condition(_attr_str: String) -> (bool, String) {
     let current_user_id = users::get_current_uid();
@@ -486,6 +499,7 @@ fn check_root_condition(_attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "user")]
 #[cfg(not(target_os = "windows"))]
 pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -502,6 +516,8 @@ pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
         )
     }
 }
+
+#[cfg(feature = "user")]
 #[cfg(not(target_os = "windows"))]
 fn check_group_condition(group_name: String) -> (bool, String) {
     let current_user_id = users::get_current_uid();
@@ -540,6 +556,7 @@ fn check_group_condition(group_name: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "user")]
 #[cfg(not(target_os = "windows"))]
 pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -556,6 +573,8 @@ pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
         )
     }
 }
+
+#[cfg(feature = "user")]
 #[cfg(not(target_os = "windows"))]
 fn check_user_condition(user_name: String) -> (bool, String) {
     let is_user = match users::get_current_username() {
@@ -583,6 +602,7 @@ fn check_user_condition(user_name: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "resource")]
 pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -599,8 +619,9 @@ pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
+#[cfg(feature = "resource")]
 fn check_mem_condition(mem_size_str: String) -> (bool, String) {
-    let mut sys = System::new_all();
+    let mut sys = sysinfo::System::new_all();
     sys.refresh_all();
     let mem_size = match byte_unit::Byte::from_str(format!("{} KB", sys.total_memory())) {
         Ok(b) => b,
@@ -631,6 +652,7 @@ fn check_mem_condition(mem_size_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "resource")]
 pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -647,8 +669,9 @@ pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
+#[cfg(feature = "resource")]
 fn check_swap_condition(swap_size_str: String) -> (bool, String) {
-    let mut sys = System::new_all();
+    let mut sys = sysinfo::System::new_all();
     sys.refresh_all();
     let swap_size = match byte_unit::Byte::from_str(format!("{} KB", sys.total_swap())) {
         Ok(b) => b,
@@ -679,6 +702,7 @@ fn check_swap_condition(swap_size_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "resource")]
 pub fn cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -695,6 +719,7 @@ pub fn cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
+#[cfg(feature = "resource")]
 fn check_cpu_core_condition(core_limitation_str: String) -> (bool, String) {
     (
         match core_limitation_str.parse::<usize>() {
@@ -720,6 +745,7 @@ fn check_cpu_core_condition(core_limitation_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "resource")]
 pub fn phy_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -736,6 +762,7 @@ pub fn phy_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
+#[cfg(feature = "resource")]
 fn check_phy_core_condition(core_limitation_str: String) -> (bool, String) {
     (
         match core_limitation_str.parse::<usize>() {

@@ -20,8 +20,11 @@
           cargo publish
         '';
         featureTestScript = pkgs.writeShellScriptBin "feature-test" ''
+          cargo run --no-default-features --features=net --example=net
+          cargo run --no-default-features --features=user --example=user
+          cargo run --no-default-features --features=resource --example=resource
           cargo install cargo-hack
-          cargo hack test --each-feature --examples
+          cargo hack test --examples
         '';
       in
       with pkgs;
