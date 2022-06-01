@@ -27,19 +27,11 @@ jobs:
         id: update-dependency
         run: nix develop -c 'update-dependency'
 
-      - name: Create commit
-        id: commit
-        if: failure() && steps.update-dependency.outcome != 'success'
-        run: |
-          git config user.name 'Antonio Yang'
-          git config user.email 'yanganto@gmail.com'
-          git add Cargo.toml
-          git commit -m "Update dependency"
-
       - name: Create Pull Request
-        if: failure() && steps.update-dependency.outcome != 'success' && steps.commit.outcome == 'success'
+        if: failure() && steps.update-dependency.outcome != 'success'
         uses: peter-evans/create-pull-request@v4
         with:
+          add-paths: Cargo.toml
           reviewers: yanganto
           base: main
           branch: dependency-update
