@@ -82,7 +82,7 @@ pub(crate) fn fn_macro(
         sig,
         block,
     } = input;
-    let attr_str = attr.to_string().replace(" ", "");
+    let attr_str = attr.to_string().replace(' ', "");
     let (all_var_exist, ignore_msg) = check_condition(attr_str);
     let has_test = has_test_attr(&attrs);
 
@@ -136,7 +136,7 @@ pub(crate) fn mod_macro(
     } = input;
     if let Some(content) = content {
         let content = content.1;
-        let attr_str = attr.to_string().replace(" ", "");
+        let attr_str = attr.to_string().replace(' ', "");
         let (all_var_exist, ignore_msg) = check_condition(attr_str);
         let has_test = has_test_cfg(&attrs);
 
