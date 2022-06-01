@@ -32,7 +32,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
       - name: Create commit
         run: |
           git config user.name 'Antonio Yang'
