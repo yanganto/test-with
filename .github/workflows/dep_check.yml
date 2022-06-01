@@ -1,0 +1,45 @@
+name: Dependency Check
+
+concurrency:
+  group: rust-dependency-check-${{ github.head_ref }}
+  cancel-in-progress: true
+
+on:
+  schedule:
+    - cron:  '0 0 * * *'
+  pull_request:
+
+jobs:
+  update_dependency:
+    name: Check dependency
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - uses: cachix/install-nix-action@v15
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Update dependency
+        run: nix develop -c 'update-dependency'
+
+  make_pr:
+    needs: update_dependency
+    name: Make PR for updating dependency
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create commit
+        run: |
+          git config user.name 'Antonio Yang'
+          git config user.email 'yanganto@gmail.com'
+          git add Cargo.toml
+          git commit -m "Update dependency"
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          reviewers: yanganto

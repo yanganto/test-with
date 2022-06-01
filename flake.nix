@@ -15,9 +15,17 @@
         };
         rust = pkgs.rust-bin.nightly."2022-03-30".default;
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
-          cd $1
-          cargo login $2
+          cargo login $1
           cargo publish
+        '';
+        updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
+          cargo install dependency-refresh
+          dr ./Cargo.toml
+          if [ -f "Cargo.toml.old" ]; then
+            rm Cargo.toml.old
+            exit 0
+          fi
+          exit 1
         '';
         featureTestScript = pkgs.writeShellScriptBin "feature-test" ''
           cargo run --no-default-features --features=net --example=net
@@ -37,6 +45,7 @@
 
             publishScript
             featureTestScript
+            updateDependencyScript
           ];
           SAYING = ''
             The value of a man resides in what he gives

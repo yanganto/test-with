@@ -24,4 +24,4 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Publish Crate
-        run: nix develop -c 'crate-publish' cargo-sewup ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: nix develop -c 'crate-publish' ${{ secrets.CARGO_REGISTRY_TOKEN }}
