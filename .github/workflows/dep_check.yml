@@ -34,6 +34,5 @@ jobs:
           reviewers: yanganto
           base: main
           branch: dependency-update
-          branch-suffix: timestamp
           title: "Dependency Update"
           commit-message: "automated dependency update"
