@@ -5,7 +5,7 @@
 
 A lib help you run test with conditions, else the test will be ignored with clear message.
 
-## Preamble
+## Introduction
 It is good to use this crate in dev dependency as following
 ```toml
 [dev-dependencies]
@@ -22,11 +22,7 @@ The features you can use are `net`, `resource`, `user`.
 
 Currently, the condition is checked on build-time not runtime and not perfect and good for most develop scenario,
 because of this [issue][original-issue] of rust-lang.
-
-To avoid [known issue][known-issue] in some corner case, please clean before running test.
-```bash
-cargo clean; SOME_VAR=true cargo test
-```
+Here is the [slides][coscup-slides] of a talk in COSCUP and help you know more about it.
 
 If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will add it for you.
 
@@ -232,3 +228,4 @@ fn test_ignored_by_swap() {
 [original-issue]: https://github.com/rust-lang/rust/issues/68007
 [rust-pre-rfc]: https://internals.rust-lang.org/t/pre-rfc-provide-ignore-message-when-the-test-ignored/15904
 [known-issue]: https://github.com/yanganto/test-with/issues/18
+[coscup-slides]: http://slides.com/yanganto/rust-ignore
