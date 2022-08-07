@@ -77,16 +77,21 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 fn check_env_condition(attr_str: String) -> (bool, String) {
     let var_names: Vec<&str> = attr_str.split(',').collect();
-    let mut all_var_exist = true;
-    let mut ignore_msg = "because variables not found:".to_string();
+    let mut missing_vars = vec![];
     for var in var_names.iter() {
         if std::env::var(var).is_err() {
-            all_var_exist = false;
-            ignore_msg.push(' ');
-            ignore_msg.push_str(var);
+            missing_vars.push(var.to_string());
         }
     }
-    (all_var_exist, ignore_msg)
+    let ignore_msg = if missing_vars.len() == 1 {
+        format!("because variable {} not found", missing_vars[0])
+    } else {
+        format!(
+            "because following variables not found:\n{}\n",
+            missing_vars.join(", ")
+        )
+    };
+    (missing_vars.is_empty(), ignore_msg)
 }
 
 /// Run test case when the file exist.
@@ -135,16 +140,21 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 fn check_file_condition(attr_str: String) -> (bool, String) {
     let files: Vec<&str> = attr_str.split(',').collect();
-    let mut all_file_exist = true;
-    let mut ignore_msg = "because variables not found:".to_string();
+    let mut missing_files = vec![];
     for file in files.iter() {
-        if !Path::new(file).is_file() {
-            all_file_exist = false;
-            ignore_msg.push('\n');
-            ignore_msg.push_str(file);
+        if !Path::new(file.trim_matches('"')).is_file() {
+            missing_files.push(file.to_string());
         }
     }
-    (all_file_exist, ignore_msg)
+    let ignore_msg = if missing_files.len() == 1 {
+        format!("because file not found: {}", missing_files[0])
+    } else {
+        format!(
+            "because following files not found: \n{}\n",
+            missing_files.join("\n")
+        )
+    };
+    (missing_files.is_empty(), ignore_msg)
 }
 
 /// Run test case when the path(file or folder) exist.
@@ -193,16 +203,21 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 fn check_path_condition(attr_str: String) -> (bool, String) {
     let paths: Vec<&str> = attr_str.split(',').collect();
-    let mut all_path_exist = true;
-    let mut ignore_msg = "because path not found:".to_string();
+    let mut missing_paths = vec![];
     for path in paths.iter() {
-        if metadata(path).is_err() {
-            all_path_exist = false;
-            ignore_msg.push('\n');
-            ignore_msg.push_str(path);
+        if metadata(path.trim_matches('"')).is_err() {
+            missing_paths.push(path.to_string());
         }
     }
-    (all_path_exist, ignore_msg)
+    let ignore_msg = if missing_paths.len() == 1 {
+        format!("because path not found: {}", missing_paths[0])
+    } else {
+        format!(
+            "because following paths not found: \n{}\n",
+            missing_paths.join("\n")
+        )
+    };
+    (missing_paths.is_empty(), ignore_msg)
 }
 
 /// Run test case when the http service exist.
@@ -246,17 +261,22 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(feature = "net")]
 fn check_http_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
-    let mut all_link_exist = true;
-    let mut ignore_msg = "because link not found:".to_string();
+    let mut missing_links = vec![];
     let client = reqwest::blocking::Client::new();
     for link in links.iter() {
         if client.head(&format!("http://{}", link)).send().is_err() {
-            all_link_exist = false;
-            ignore_msg.push('\n');
-            ignore_msg.push_str(link);
+            missing_links.push(format!("http://{link:}"));
         }
     }
-    (all_link_exist, ignore_msg)
+    let ignore_msg = if missing_links.len() == 1 {
+        format!("because {} not response", missing_links[0])
+    } else {
+        format!(
+            "because following links not response: \n{}\n",
+            missing_links.join("\n")
+        )
+    };
+    (missing_links.is_empty(), ignore_msg)
 }
 
 /// Run test case when the https service exist.
@@ -300,17 +320,22 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(feature = "net")]
 fn check_https_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
-    let mut all_link_exist = true;
-    let mut ignore_msg = "because link not found:".to_string();
+    let mut missing_links = vec![];
     let client = reqwest::blocking::Client::new();
     for link in links.iter() {
         if client.head(&format!("https://{}", link)).send().is_err() {
-            all_link_exist = false;
-            ignore_msg.push('\n');
-            ignore_msg.push_str(link);
+            missing_links.push(format!("https://{link:}"));
         }
     }
-    (all_link_exist, ignore_msg)
+    let ignore_msg = if missing_links.len() == 1 {
+        format!("because {} not response", missing_links[0])
+    } else {
+        format!(
+            "because following links not response: \n{}\n",
+            missing_links.join("\n")
+        )
+    };
+    (missing_links.is_empty(), ignore_msg)
 }
 
 /// Run test case when the server online.
@@ -357,15 +382,12 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_icmp_condition(attr_str: String) -> (bool, String) {
     let ipv4s: Vec<&str> = attr_str.split(',').collect();
     let ipv4_re = unsafe { regex::Regex::new(r"^(\d+)\.(\d+)\.(\d+)\.(\d+)$").unwrap_unchecked() };
-    let mut all_ipv4_exist = true;
-    let mut ignore_msg = "because ipv4 not found:".to_string();
+    let mut missing_ips = vec![];
     for ipv4 in ipv4s.iter() {
         if let Some(cap) = ipv4_re.captures(ipv4) {
             if let Ok(addr_v4) = parse_ipv4_addre(cap) {
                 if ping::ping(addr_v4, None, None, None, None, None).is_err() {
-                    all_ipv4_exist = false;
-                    ignore_msg.push('\n');
-                    ignore_msg.push_str(ipv4);
+                    missing_ips.push(ipv4.to_string());
                 }
             } else {
                 abort_call_site!("ip v4 address malformat, digit not u8")
@@ -374,7 +396,15 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
             abort_call_site!("ip v4 address malformat")
         }
     }
-    (all_ipv4_exist, ignore_msg)
+    let ignore_msg = if missing_ips.len() == 1 {
+        format!("because ip {} not response", missing_ips[0])
+    } else {
+        format!(
+            "because following ip not response: \n{}\n",
+            missing_ips.join(", ")
+        )
+    };
+    (missing_ips.is_empty(), ignore_msg)
 }
 
 #[cfg(feature = "net")]
@@ -429,16 +459,21 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(feature = "net")]
 fn check_tcp_condition(attr_str: String) -> (bool, String) {
     let sockets: Vec<&str> = attr_str.split(',').collect();
-    let mut all_socket_exist = true;
-    let mut ignore_msg = "because socket not found:".to_string();
+    let mut missing_sockets = vec![];
     for socket in sockets.iter() {
         if TcpStream::connect(socket).is_err() {
-            all_socket_exist = false;
-            ignore_msg.push('\n');
-            ignore_msg.push_str(socket);
+            missing_sockets.push(socket.to_string());
         }
     }
-    (all_socket_exist, ignore_msg)
+    let ignore_msg = if missing_sockets.len() == 1 {
+        format!("because fail to connect socket {}", missing_sockets[0])
+    } else {
+        format!(
+            "because follow sockets can not connect\n{}\n",
+            missing_sockets.join(", ")
+        )
+    };
+    (missing_sockets.is_empty(), ignore_msg)
 }
 
 /// Run test case when runner is root
