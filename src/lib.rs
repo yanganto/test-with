@@ -654,7 +654,7 @@ pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_mem_condition(mem_size_str: String) -> (bool, String) {
     let mut sys = sysinfo::System::new_all();
     sys.refresh_all();
-    let mem_size = match byte_unit::Byte::from_str(format!("{} KB", sys.total_memory())) {
+    let mem_size = match byte_unit::Byte::from_str(format!("{} B", sys.total_memory())) {
         Ok(b) => b,
         Err(_) => abort_call_site!("memory size description is not correct"),
     };
@@ -704,7 +704,7 @@ pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_swap_condition(swap_size_str: String) -> (bool, String) {
     let mut sys = sysinfo::System::new_all();
     sys.refresh_all();
-    let swap_size = match byte_unit::Byte::from_str(format!("{} KB", sys.total_swap())) {
+    let swap_size = match byte_unit::Byte::from_str(format!("{} B", sys.total_swap())) {
         Ok(b) => b,
         Err(_) => abort_call_site!("Swap size description is not correct"),
     };
