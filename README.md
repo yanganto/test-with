@@ -58,7 +58,7 @@ test tests::test_works ... ok
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-or run all test cases for test module when the environment variable is set.
+Or run all test cases for test module when the environment variable is set.
 ```rust
 #[test_with::env(PWD)]
 #[cfg(test)]
@@ -73,6 +73,17 @@ mod tests {
 
 If the test depends on more than one environment variables,
 you can write it with multiple variables, `#[test_with::env(VAR1, VAR2)]`.
+
+Also, the test case can be ignored with the specific environment variable.
+
+```rust
+// The test will be ignored in Github actions.
+#[test_with::no_env(GITHUB_ACTIONS)]
+#[test]
+fn test_ignore_in_github_action() {
+    println!("Should be ignored in GITHUB_ACTION");
+}
+```
 
 ## File/Folder
 Run test case when the file or folder exist.  This is good for testing with database config.

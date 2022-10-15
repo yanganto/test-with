@@ -1,12 +1,12 @@
 [package]
 name = "test-with"
-version = "0.7.9"
+version = "0.8.0"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
 license = "MIT"
 description = "A lib help you run test with condition"
 repository = "https://github.com/yanganto/test-with"
-keywords = [ "testing", "environment", "condition", "toggle", "integration" ]
+keywords = [ "testing", "condition", "toggle", "integration", "ignore" ]
 categories = [ "development-tools", "testing" ]
 
 [lib]
@@ -26,7 +26,7 @@ byte-unit = { version = "4.0", optional = true }
 num_cpus = { version = "1.13", optional = true }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
-users = { version = "0.11.0", optional = true }
+users = { version = "0.11", optional = true }
 
 [features]
 default = ["net", "resource", "user"]
