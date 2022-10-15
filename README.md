@@ -74,11 +74,11 @@ mod tests {
 If the test depends on more than one environment variables,
 you can write it with multiple variables, `#[test_with::env(VAR1, VAR2)]`.
 
-Also, the test case can be ignored in an environment with environment variables.
+Also, the test case can be ignored with the specific environment variable.
 
 ```rust
 // The test will be ignored in Github actions.
-#[test_with::env(GITHUB_ACTIONS)]
+#[test_with::no_env(GITHUB_ACTIONS)]
 #[test]
 fn test_ignore_in_github_action() {
     println!("Should be ignored in GITHUB_ACTION");
