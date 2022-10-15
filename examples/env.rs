@@ -24,6 +24,12 @@ mod tests {
     fn test_ignored_too() {
         panic!("should be ignored")
     }
+
+    #[test_with::no_env(GITHUB_ACTIONS)]
+    #[test]
+    fn test_ignore_in_github_action() {
+        println!("should be ignored in GITHUB_ACTION");
+    }
 }
 
 #[test_with::env(PWD)]

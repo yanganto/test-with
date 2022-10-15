@@ -94,6 +94,48 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
     (missing_vars.is_empty(), ignore_msg)
 }
 
+/// Ignore test case when the environment variable is set.
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // The test will be ignored in GITHUB_ACTION
+///     #[test_with::no_env(GITHUB_ACTIONS)]
+///     #[test]
+///     fn test_ignore_in_github_action() {
+///         assert!(false);
+///     }
+/// }
+#[proc_macro_attribute]
+pub fn no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_no_env_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_no_env_condition,
+        )
+    }
+}
+
+fn check_no_env_condition(attr_str: String) -> (bool, String) {
+    let var_names: Vec<&str> = attr_str.split(',').collect();
+    for var in var_names.iter() {
+        if std::env::var(var).is_ok() {
+            return (
+                false,
+                format!("because the environment with variable {var:} will ignore"),
+            );
+        }
+    }
+    (true, String::new())
+}
+
 /// Run test case when the file exist.
 /// ```
 /// #[cfg(test)]
