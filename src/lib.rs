@@ -23,8 +23,6 @@ use std::{fs::metadata, path::Path};
 #[cfg(feature = "net")]
 use std::net::{IpAddr, Ipv4Addr, TcpStream};
 
-#[cfg(feature = "executable")]
-use is_executable::IsExecutable;
 use proc_macro::TokenStream;
 #[cfg(any(feature = "resource", feature = "net"))]
 use proc_macro_error::abort_call_site;
@@ -924,17 +922,9 @@ fn check_executable_condition(attr_str: String) -> (bool, String) {
     let executables: Vec<&str> = attr_str.split(',').collect();
     let mut missing_executables = vec![];
     for exe in executables.iter() {
-        let exe = exe.trim_matches('"');
-        let path = Path::new(exe);
-
-        if path.is_executable() {
-            continue;
+        if which(exe.trim_matches('"')).is_err() {
+            missing_executables.push(exe.to_string());
         }
-
-        if which(exe).is_ok() {
-            continue;
-        }
-        missing_executables.push(exe.to_string());
     }
     let ignore_msg = if missing_executables.len() == 1 {
         format!("because executable not found: {}", missing_executables[0])
