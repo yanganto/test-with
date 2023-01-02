@@ -32,6 +32,7 @@
           cargo run --no-default-features --features=net --example=net
           cargo run --no-default-features --features=user --example=user
           cargo run --no-default-features --features=resource --example=resource
+          cargo run --no-default-features --features=executable --example=executable
           cargo install cargo-hack
           cargo hack test --examples
         '';
