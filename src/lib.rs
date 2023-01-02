@@ -1,19 +1,38 @@
 //! `test_with` provides [macro@env], [macro@file], [macro@path], [macro@http], [macro@https],
 //! [macro@icmp], [macro@tcp], [macro@root], [macro@group], [macro@user], [macro@mem], [macro@swap],
-//! [macro@cpu_core], [macro@phy_core]  macros to help you run test case only with the condition is
-//! fulfilled.  If the `#[test]` is absent for the test case, `#[test_with]` will add it to the
-//! test case automatically.
+//! [macro@cpu_core], [macro@phy_core], [macro@executable] macros to help you run test case only
+//! with the condition is fulfilled.  If the `#[test]` is absent for the test case, `#[test_with]`
+//! will add it to the test case automatically.
+//!
+//! This crate help you easier make integrating test case and has a good cargo summary on CI server,
+//! and will not affect on your binary output when you dependent it as dev-dependency as following.
+//! ```
+//! [dev-dependencies]
+//! test-with = "*"
+//! ```
+//! All features will be opt-in default feature, so this crate will be easier to use, if you using
+//! a CI server with really limitation resource and want this crate as slim as possible, you can
+//! select the feature you want as following.
+//! ```
+//! [dev-dependencies]
+//! test-with = { version = "*", default-features = false, features = ["net"] }
+//! ```
+
 use std::{fs::metadata, path::Path};
 
 #[cfg(feature = "net")]
 use std::net::{IpAddr, Ipv4Addr, TcpStream};
 
+#[cfg(feature = "executable")]
+use is_executable::IsExecutable;
 use proc_macro::TokenStream;
 #[cfg(any(feature = "resource", feature = "net"))]
 use proc_macro_error::abort_call_site;
 use syn::{parse_macro_input, ItemFn, ItemMod};
 #[cfg(feature = "resource")]
 use sysinfo::SystemExt;
+#[cfg(feature = "executable")]
+use which::which;
 
 use crate::utils::{fn_macro, is_module, mod_macro};
 
@@ -847,4 +866,83 @@ fn check_phy_core_condition(core_limitation_str: String) -> (bool, String) {
             core_limitation_str
         ),
     )
+}
+
+/// Run test case when the executables exist.
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///     // `pwd` executable command exists
+///     #[test_with::executable(pwd)]
+///     #[test]
+///     fn test_executable() {
+///         assert!(true);
+///     }
+///
+///     // `/bin/sh` executable exists
+///     #[test_with::executable(/bin/sh)]
+///     #[test]
+///     fn test_executable_with_path() {
+///         assert!(true);
+///     }
+///
+///     // `non` does not exist
+///     #[test_with::executable(non)]
+///     #[test]
+///     fn test_non_existing_executable() {
+///         panic!("should be ignored")
+///     }
+///
+///     // `pwd` and `ls` exist
+///     #[test_with::executable(pwd, ls)]
+///     #[test]
+///     fn test_executables_too() {
+///         assert!(true);
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+#[cfg(feature = "executable")]
+pub fn executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_executable_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_executable_condition,
+        )
+    }
+}
+
+#[cfg(feature = "executable")]
+fn check_executable_condition(attr_str: String) -> (bool, String) {
+    let executables: Vec<&str> = attr_str.split(',').collect();
+    let mut missing_executables = vec![];
+    for exe in executables.iter() {
+        let exe = exe.trim_matches('"');
+        let path = Path::new(exe);
+
+        if path.is_executable() {
+            continue;
+        }
+
+        if which(exe).is_ok() {
+            continue;
+        }
+        missing_executables.push(exe.to_string());
+    }
+    let ignore_msg = if missing_executables.len() == 1 {
+        format!("because executable not found: {}", missing_executables[0])
+    } else {
+        format!(
+            "because following executables not found: \n{}\n",
+            missing_executables.join("\n")
+        )
+    };
+    (missing_executables.is_empty(), ignore_msg)
 }
