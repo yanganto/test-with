@@ -13,12 +13,12 @@ test-with = "*"
 ```
 
 If you want the dependency smaller with a shorter compiling time, you can disable default features and use specific one.
-For example, if you only checking a remote server, you can use the net feature as the following.
+For example, if you only checking a remote web server, you can use the `net` or `http` feature as the following.
 ```toml
 [dev-dependencies]
-test-with = { version = "*", default-features = false, features = ["net"] }
+test-with = { version = "*", default-features = false, features = ["http"] }
 ```
-The features you can use are `net`, `resource`, `user`.
+The features you can use are `net`(`http`, `icmp`), `resource`, `user`, `executable`.
 
 Currently, the condition is checked on build-time not runtime and not perfect and good for most develop scenario,
 because of this [issue][original-issue] of rust-lang.
@@ -27,7 +27,7 @@ Here is the [slides][coscup-slides] of a talk in COSCUP and help you know more a
 If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will add it for you.
 
 Rust version `1.61` of stable channel or `2022-03-30` of nightly channel will show the ignore message.
-If the ignore message does not show in the Rust version you used, the feature `ign-msg` can be used to work around.
+If the ignore message does not show in the previous Rust version you used, the feature `ign-msg` can be used to work around.
 and the name of ignored test case will be rewritten, such that you can easier to know why the test is ignored.
 
 ## Environment Variable
@@ -118,6 +118,7 @@ you can write it with multiple file/path,
 
 ## Http/Https Service
 Run test case when the http/https service available.  This is good for integration testing.
+Require `http` feature, if default features are disabled.
 
 ```rust
 // https service exists
@@ -159,6 +160,7 @@ fn test_ignored() {
 ## Remote Server Online Status
 Run integration test case when the remote server online.
 **Please note the user running test case should have capability to open socket**.
+Require `icmp` feature, if default features are disabled.
 
 ```rust
 // localhost is online
@@ -178,6 +180,7 @@ fn test_ignored() {
 
 ## User/Group condition
 Run integration test case when the user is specific user or in specific group
+Require `user` feature, if default features are disabled.
 ```rust
 #[test_with::root()]
 #[test]
@@ -200,6 +203,7 @@ fn test_ignored3() {
 
 ## CPU/Memory/Swap condition
 Run integration test case when the memory/swap is enough
+Require `resource` feature, if default features are disabled.
 ```rust
 #[test_with::cpu_core(32)]
 #[test]
@@ -229,6 +233,7 @@ fn test_ignored_by_swap() {
 
 ## Executable condition
 Run integration test case when the executables can be accessed
+Require `executable` feature, if default features are disabled.
 ```rust
     // `pwd` executable command exists
     #[test_with::executable(pwd)]

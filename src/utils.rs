@@ -86,7 +86,7 @@ pub(crate) fn fn_macro(
     let (all_var_exist, ignore_msg) = check_condition(attr_str);
     let has_test = has_test_attr(&attrs);
 
-    return if all_var_exist && has_test {
+    if all_var_exist && has_test {
         quote! {
             #(#attrs)*
             #vis #sig #block
@@ -118,7 +118,7 @@ pub(crate) fn fn_macro(
            #vis #sig #block
         }
         .into()
-    };
+    }
 }
 
 pub(crate) fn mod_macro(
@@ -140,7 +140,7 @@ pub(crate) fn mod_macro(
         let (all_var_exist, ignore_msg) = check_condition(attr_str);
         let has_test = has_test_cfg(&attrs);
 
-        return if all_var_exist && has_test {
+        if all_var_exist && has_test {
             quote! {
                 #(#attrs)*
                 #[cfg(test)]
@@ -209,7 +209,7 @@ pub(crate) fn mod_macro(
                 }
             }
             .into()
-        };
+        }
     } else {
         abort_call_site!("should use on mod with context")
     }
