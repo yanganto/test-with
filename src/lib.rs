@@ -20,11 +20,12 @@
 
 use std::{fs::metadata, path::Path};
 
-#[cfg(feature = "net")]
-use std::net::{IpAddr, Ipv4Addr, TcpStream};
+#[cfg(feature = "icmp")]
+use std::net::IpAddr;
+use std::net::TcpStream;
 
 use proc_macro::TokenStream;
-#[cfg(any(feature = "resource", feature = "net"))]
+#[cfg(any(feature = "resource", feature = "icmp"))]
 use proc_macro_error::abort_call_site;
 use syn::{parse_macro_input, ItemFn, ItemMod};
 #[cfg(feature = "resource")]
@@ -300,7 +301,7 @@ fn check_path_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[cfg(feature = "net")]
+#[cfg(feature = "http")]
 pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -317,7 +318,7 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
-#[cfg(feature = "net")]
+#[cfg(feature = "http")]
 fn check_http_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
     let mut missing_links = vec![];
@@ -359,7 +360,7 @@ fn check_http_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[cfg(feature = "net")]
+#[cfg(feature = "http")]
 pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -376,7 +377,7 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
-#[cfg(feature = "net")]
+#[cfg(feature = "http")]
 fn check_https_condition(attr_str: String) -> (bool, String) {
     let links: Vec<&str> = attr_str.split(',').collect();
     let mut missing_links = vec![];
@@ -420,7 +421,7 @@ fn check_https_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[cfg(feature = "net")]
+#[cfg(feature = "icmp")]
 pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -437,22 +438,17 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
-#[cfg(feature = "net")]
+#[cfg(feature = "icmp")]
 fn check_icmp_condition(attr_str: String) -> (bool, String) {
-    let ipv4s: Vec<&str> = attr_str.split(',').collect();
-    let ipv4_re = unsafe { regex::Regex::new(r"^(\d+)\.(\d+)\.(\d+)\.(\d+)$").unwrap_unchecked() };
+    let ips: Vec<&str> = attr_str.split(',').collect();
     let mut missing_ips = vec![];
-    for ipv4 in ipv4s.iter() {
-        if let Some(cap) = ipv4_re.captures(ipv4) {
-            if let Ok(addr_v4) = parse_ipv4_addre(cap) {
-                if ping::ping(addr_v4, None, None, None, None, None).is_err() {
-                    missing_ips.push(ipv4.to_string());
-                }
-            } else {
-                abort_call_site!("ip v4 address malformat, digit not u8")
+    for ip in ips.iter() {
+        if let Ok(addr) = ip.parse::<IpAddr>() {
+            if ping::ping(addr, None, None, None, None, None).is_err() {
+                missing_ips.push(ip.to_string());
             }
         } else {
-            abort_call_site!("ip v4 address malformat")
+            abort_call_site!("ip address malformat")
         }
     }
     let ignore_msg = if missing_ips.len() == 1 {
@@ -464,16 +460,6 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
         )
     };
     (missing_ips.is_empty(), ignore_msg)
-}
-
-#[cfg(feature = "net")]
-fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntError> {
-    Ok(IpAddr::V4(Ipv4Addr::new(
-        cap[1].parse::<u8>()?,
-        cap[2].parse::<u8>()?,
-        cap[3].parse::<u8>()?,
-        cap[4].parse::<u8>()?,
-    )))
 }
 
 /// Run test case when socket connected
@@ -498,7 +484,6 @@ fn parse_ipv4_addre(cap: regex::Captures) -> Result<IpAddr, std::num::ParseIntEr
 /// }
 /// ```
 #[proc_macro_attribute]
-#[cfg(feature = "net")]
 pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -515,7 +500,6 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
-#[cfg(feature = "net")]
 fn check_tcp_condition(attr_str: String) -> (bool, String) {
     let sockets: Vec<&str> = attr_str.split(',').collect();
     let mut missing_sockets = vec![];

@@ -29,7 +29,11 @@
           fi
         '';
         featureTestScript = pkgs.writeShellScriptBin "feature-test" ''
-          cargo run --no-default-features --features=net --example=net
+          cargo run --no-default-features --features=http --example=http
+          cargo run --no-default-features --features=icmp --example=icmp
+          cargo run --no-default-features --example=tcp
+          cargo run --no-default-features --features=net --example=http
+          cargo run --no-default-features --features=net --example=icmp
           cargo run --no-default-features --features=user --example=user
           cargo run --no-default-features --features=resource --example=resource
           cargo run --no-default-features --features=executable --example=executable
