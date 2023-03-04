@@ -6,14 +6,14 @@
 //!
 //! This crate help you easier make integrating test case and has a good cargo summary on CI server,
 //! and will not affect on your binary output when you dependent it as dev-dependency as following.
-//! ```
+//! ```toml
 //! [dev-dependencies]
 //! test-with = "*"
 //! ```
 //! All features will be opt-in default feature, so this crate will be easier to use, if you using
 //! a CI server with really limitation resource and want this crate as slim as possible, you can
 //! select the feature you want as following.
-//! ```
+//! ```toml
 //! [dev-dependencies]
 //! test-with = { version = "*", default-features = false, features = ["net"] }
 //! ```
