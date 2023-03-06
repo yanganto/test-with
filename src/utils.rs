@@ -23,6 +23,17 @@ pub(crate) fn has_test_attr(attrs: &[Attribute]) -> bool {
     false
 }
 
+// check the attribute order for `#[serial]`
+pub(crate) fn check_before_attrs(attrs: &[Attribute]) {
+    for attr in attrs.iter() {
+        if let Some(seg) = attr.path.segments.last() {
+            if seg.ident == "serial" {
+                abort_call_site!("`#[test_with::*]` should place after `#[serial]`");
+            }
+        }
+    }
+}
+
 // check for `#[cfg(test)]`
 pub(crate) fn has_test_cfg(attrs: &[Attribute]) -> bool {
     for attr in attrs.iter() {
@@ -84,6 +95,7 @@ pub(crate) fn fn_macro(
     } = input;
     let attr_str = attr.to_string().replace(' ', "");
     let (all_var_exist, ignore_msg) = check_condition(attr_str);
+    check_before_attrs(&attrs);
     let has_test = has_test_attr(&attrs);
 
     if all_var_exist && has_test {
