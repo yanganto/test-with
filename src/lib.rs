@@ -26,7 +26,7 @@ use std::net::TcpStream;
 
 use proc_macro::TokenStream;
 #[cfg(any(feature = "resource", feature = "icmp"))]
-use proc_macro_error::abort_call_site;
+use proc_macro_error::{abort_call_site, proc_macro_error};
 use syn::{parse_macro_input, ItemFn, ItemMod};
 #[cfg(feature = "resource")]
 use sysinfo::SystemExt;
@@ -77,6 +77,7 @@ mod utils;
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -125,6 +126,7 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
 ///     }
 /// }
 #[proc_macro_attribute]
+#[proc_macro_error]
 pub fn no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -182,6 +184,7 @@ fn check_no_env_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -245,6 +248,7 @@ fn check_file_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -301,6 +305,7 @@ fn check_path_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(feature = "http")]
 pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -360,6 +365,7 @@ fn check_http_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(feature = "http")]
 pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -421,6 +427,7 @@ fn check_https_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(feature = "icmp")]
 pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -484,6 +491,7 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -534,6 +542,7 @@ fn check_tcp_condition(attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(all(feature = "user", not(target_os = "windows")))]
 pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -575,6 +584,7 @@ fn check_root_condition(_attr_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(all(feature = "user", not(target_os = "windows")))]
 pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -631,6 +641,7 @@ fn check_group_condition(group_name: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(all(feature = "user", not(target_os = "windows")))]
 pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -676,6 +687,7 @@ fn check_user_condition(user_name: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(feature = "resource")]
 pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -726,6 +738,7 @@ fn check_mem_condition(mem_size_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(feature = "resource")]
 pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -776,6 +789,7 @@ fn check_swap_condition(swap_size_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(feature = "resource")]
 pub fn cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -819,6 +833,7 @@ fn check_cpu_core_condition(core_limitation_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(feature = "resource")]
 pub fn phy_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -884,6 +899,7 @@ fn check_phy_core_condition(core_limitation_str: String) -> (bool, String) {
 /// }
 /// ```
 #[proc_macro_attribute]
+#[proc_macro_error]
 #[cfg(feature = "executable")]
 pub fn executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
