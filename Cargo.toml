@@ -43,4 +43,4 @@ executable = ["which"]
 
 [dev-dependencies]
 tokio = { version = "1.15.0", features = ["rt", "macros"] }
-serial_test = "*"
+serial_test = "1.0.0"
