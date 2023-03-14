@@ -26,7 +26,8 @@ use std::net::TcpStream;
 
 use proc_macro::TokenStream;
 #[cfg(any(feature = "resource", feature = "icmp"))]
-use proc_macro_error::{abort_call_site, proc_macro_error};
+use proc_macro_error::abort_call_site;
+use proc_macro_error::proc_macro_error;
 use syn::{parse_macro_input, ItemFn, ItemMod};
 #[cfg(feature = "resource")]
 use sysinfo::SystemExt;
