@@ -29,6 +29,7 @@
           fi
         '';
         featureTestScript = pkgs.writeShellScriptBin "feature-test" ''
+          set -e
           cargo run --no-default-features --features=http --example=http
           cargo run --no-default-features --features=icmp --example=icmp
           cargo run --no-default-features --example=tcp
