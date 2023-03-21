@@ -6,15 +6,15 @@ use proc_macro2::Span;
 use proc_macro2::TokenTree;
 use proc_macro_error::abort_call_site;
 use quote::quote;
-use syn::Attribute;
 #[cfg(feature = "ign-msg")]
 use syn::Signature;
+use syn::{Attribute, Meta};
 use syn::{Ident, Item, ItemFn, ItemMod};
 
 // check for `#[test]`, `#[tokio::test]`, `#[async_std::test]`
 pub(crate) fn has_test_attr(attrs: &[Attribute]) -> bool {
     for attr in attrs.iter() {
-        if let Some(seg) = attr.path.segments.last() {
+        if let Some(seg) = attr.path().segments.last() {
             if seg.ident == "test" {
                 return true;
             }
@@ -26,7 +26,7 @@ pub(crate) fn has_test_attr(attrs: &[Attribute]) -> bool {
 // check the attribute order for `#[serial]`
 pub(crate) fn check_before_attrs(attrs: &[Attribute]) {
     for attr in attrs.iter() {
-        if let Some(seg) = attr.path.segments.last() {
+        if let Some(seg) = attr.path().segments.last() {
             if seg.ident == "serial" {
                 abort_call_site!("`#[test_with::*]` should place after `#[serial]`");
             }
@@ -37,11 +37,13 @@ pub(crate) fn check_before_attrs(attrs: &[Attribute]) {
 // check for `#[cfg(test)]`
 pub(crate) fn has_test_cfg(attrs: &[Attribute]) -> bool {
     for attr in attrs.iter() {
-        for token in attr.tokens.clone().into_iter() {
-            if let TokenTree::Group(group) = token {
-                for tt in group.stream().into_iter() {
-                    if "test" == tt.to_string() {
-                        return true;
+        if let Meta::List(metalist) = &attr.meta {
+            for token in metalist.tokens.clone().into_iter() {
+                if let TokenTree::Group(group) = token {
+                    for tt in group.stream().into_iter() {
+                        if "test" == tt.to_string() {
+                            return true;
+                        }
                     }
                 }
             }
