@@ -1,6 +1,6 @@
 [package]
 name = "test-with"
-version = "0.9.6"
+version = "0.9.7"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
 license = "MIT"
