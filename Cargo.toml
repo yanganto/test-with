@@ -1,6 +1,6 @@
 [package]
 name = "test-with"
-version = "0.9.7"
+version = "0.10.0"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -33,6 +33,7 @@ users = { version = "0.11", optional = true }
 default = ["net", "resource", "user", "executable"]
 ign-msg = []
 
+runtime = []
 net = ["http", "icmp"]
 http = ["reqwest"]
 icmp = ["ping"]

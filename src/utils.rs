@@ -23,6 +23,35 @@ pub(crate) fn has_test_attr(attrs: &[Attribute]) -> bool {
     false
 }
 
+// check
+// first for `#[test]`, `#[tokio::test]`, `#[async_std::test]`
+// second for `#[test_with::*]`
+// third for runtime mod `#[test_with::runtime_*]`
+#[cfg(feature = "runtime")]
+pub(crate) fn test_with_attrs(attrs: &[Attribute]) -> (bool, bool, bool) {
+    let mut has_test = false;
+    let mut has_test_with = false;
+    let mut has_rt_test_with = false;
+    for attr in attrs.iter() {
+        if let Some(seg) = attr.path().segments.last() {
+            if seg.ident == "test" {
+                has_test = true;
+            }
+        }
+        if let (Some(first_seg), Some(last_seg)) =
+            (attr.path().segments.first(), attr.path().segments.last())
+        {
+            if first_seg.ident == "test_with" {
+                has_test_with = true;
+            }
+            if last_seg.ident.to_string().starts_with("runtime_") {
+                has_rt_test_with = true;
+            }
+        }
+    }
+    (has_test, has_test_with, has_rt_test_with)
+}
+
 // check the attribute order for `#[serial]`
 pub(crate) fn check_before_attrs(attrs: &[Attribute]) {
     for attr in attrs.iter() {

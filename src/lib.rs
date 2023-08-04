@@ -29,6 +29,9 @@ use proc_macro::TokenStream;
 use proc_macro_error::abort_call_site;
 use proc_macro_error::proc_macro_error;
 use syn::{parse_macro_input, ItemFn, ItemMod};
+
+#[cfg(feature = "runtime")]
+use syn::Item;
 #[cfg(feature = "resource")]
 use sysinfo::SystemExt;
 #[cfg(feature = "executable")]
@@ -112,6 +115,50 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
         )
     };
     (missing_vars.is_empty(), ignore_msg)
+}
+
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let var_names: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            let mut missing_vars = vec![];
+            #(
+                if std::env::var(#var_names).is_err() {
+                    missing_vars.push(#var_names);
+                }
+            )*
+            match missing_vars.len() {
+                0 => #ident(),
+                1 => return Err(
+                    format!("{}because variable {} not found",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
+                ).into()),
+                _ => return Err(
+                    format!("{}because following variables not found:\n{}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
+                ).into()),
+            }
+            Ok(())
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
 }
 
 /// Ignore test case when the environment variable is set.
@@ -936,4 +983,91 @@ fn check_executable_condition(attr_str: String) -> (bool, String) {
         )
     };
     (missing_executables.is_empty(), ignore_msg)
+}
+
+#[cfg(feature = "runtime")]
+#[proc_macro]
+pub fn runner(input: TokenStream) -> TokenStream {
+    let input_str = input.to_string();
+    let mod_names: Vec<syn::Ident> = input_str
+        .split(",")
+        .map(|s| syn::Ident::new(s, proc_macro2::Span::call_site()))
+        .collect();
+    quote::quote! {
+        fn main() {
+            let args = libtest_with::Arguments::from_args();
+            let mut tests = Vec::new();
+            #(
+                tests.append(&mut #mod_names::_runtime_tests());
+            )*
+            libtest_with::run(&args, tests).exit();
+        }
+    }
+    .into()
+}
+
+#[cfg(feature = "runtime")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let ItemMod {
+        attrs,
+        vis,
+        mod_token,
+        ident,
+        content,
+        ..
+    } = parse_macro_input!(stream as ItemMod);
+
+    if let Some(content) = content {
+        let content = content.1;
+        if crate::utils::has_test_cfg(&attrs) {
+            abort_call_site!("should not use `#[cfg(test)]` on the mod with `#[test_with::module]`")
+        } else {
+            let test_names: Vec<String> = content
+                .iter()
+                .filter_map(|c| match c {
+                    Item::Fn(ItemFn {
+                        sig: syn::Signature { ident, .. },
+                        attrs,
+                        ..
+                    }) => match crate::utils::test_with_attrs(&attrs) {
+                        (true, true, _) => abort_call_site!(
+                            "should not use #[test] for method in `#[test_with::module]`"
+                        ),
+                        (_, true, false) => abort_call_site!(
+                            "use `#[test_with::runtime_*]` for method in `#[test_with::module]`"
+                        ),
+                        (false, true, true) => Some(ident.to_string()),
+                        _ => None,
+                    },
+                    _ => None,
+                })
+                .collect();
+            let check_names: Vec<syn::Ident> = test_names
+                .iter()
+                .map(|c| {
+                    syn::Ident::new(
+                        &format!("_check_{}", c.to_string()),
+                        proc_macro2::Span::call_site(),
+                    )
+                })
+                .collect();
+            quote::quote! {
+                #(#attrs)*
+                #vis #mod_token #ident {
+                    pub fn _runtime_tests() -> Vec<libtest_with::Trial> {
+                        use libtest_with::Trial;
+                        vec![
+                            #(Trial::test(#test_names, #check_names),)*
+                        ]
+                    }
+                    #(#content)*
+                }
+            }
+            .into()
+        }
+    } else {
+        abort_call_site!("should use on mod with context")
+    }
 }
