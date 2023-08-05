@@ -23,6 +23,8 @@ The features you can use are `net`(`http`, `icmp`), `resource`, `user`, `executa
 Currently, the condition is checked on build-time not runtime and not perfect and good for most develop scenario,
 because of this [issue][original-issue] of rust-lang.
 Here is the [slides][coscup-slides] of a talk in COSCUP and help you know more about it.
+If you really want to check the condition in runtime, please check [runtime section](https://github.com/yanganto/test-with#runtime).
+The `runtime` feature and runtime macros (`test_with::runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`) can help you run the test and check the conditions in runtime.
 
 If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will add it for you.
 
@@ -265,6 +267,34 @@ Require `executable` feature, if default features are disabled.
         assert!(true);
     }
 ```
+
+## Runtime
+We can let an example to do thing that cargo test runner do, and ignore testcase in runtime.
+The testcase of in the example will not in `#[cfg(test)]` or `#[test]` anymore, and use `#[test_with::runtime_*]`,
+the test runner will treat it as the test in Rust and also provide the same summary as `cargo test`.
+
+The `runtime` feature should be enabled and also include the `libtest-with` in `Cargo.toml`
+```toml
+test-with = { version = "0.10", features = ["runtime"] }
+libtest-with = "0.6.1-0"
+```
+
+Create an example with the following runtime macros (`test_with::runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).
+```rust
+
+test_with::runner!(module_name);
+
+#[test_with::module]
+mod module_name {
+    #[test_with::runtime_env(PWD)]
+    fn test_works() {
+    }
+}
+
+```
+
+Please check out the [example/runner](https://github.com/yanganto/test-with/tree/main/examples/runner).
+
 
 ## Relating issues
 * [Solve this in runtime][original-issue]
