@@ -40,6 +40,10 @@
           cargo run --no-default-features --features=executable --example=executable
           cargo install cargo-hack
           cargo hack test --examples
+
+          # runtime ignore example
+          cd examples/runner
+          cargo run --example test
         '';
       in
       with pkgs;
