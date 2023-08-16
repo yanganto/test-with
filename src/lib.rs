@@ -17,6 +17,30 @@
 //! [dev-dependencies]
 //! test-with = { version = "*", default-features = false, features = ["net"] }
 //! ```
+//!
+//! The solution to have a real runtime condition check, we need to put the test as normal function
+//! as an example, then use `cargo run --example`
+//! The `test-with` need be included as normal dependency with `runtime` feature.
+//! [macro@runner] and [macro@module] are for the basic skeleton of the test runner.
+//! [macro@runtime_env], [macro@runtime_no_env] are used to transform a normal function to a
+//! testcase.
+//!
+//! ```toml
+//! [dependencies]
+//! test-with = { version = "*", default-features = false, features = ["runtime"] }
+//! ```
+//!
+//! ```rust
+//! // write as example in exmaples/*rs
+//! test_with::runner!(env);
+//! #[test_with::module]
+//! mod env {
+//! #[test_with::runtime_env(PWD)]
+//! fn test_works() {
+//!     assert!(true);
+//!     }
+//! }
+//! ```
 
 use std::{fs::metadata, path::Path};
 
@@ -117,6 +141,18 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
     (missing_vars.is_empty(), ignore_msg)
 }
 
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(env);
+/// #[test_with::module]
+/// mod env {
+/// #[test_with::runtime_env(PWD)]
+/// fn test_works() {
+///     assert!(true);
+///     }
+/// }
+///```
+#[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
@@ -202,6 +238,62 @@ fn check_no_env_condition(attr_str: String) -> (bool, String) {
         }
     }
     (true, String::new())
+}
+
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(env);
+/// #[test_with::module]
+/// mod env {
+/// #[test_with::runtime_no_env(NOT_EXIST)]
+/// fn test_works() {
+///     assert!(true);
+///     }
+/// }
+///```
+#[cfg(feature = "runtime")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let var_names: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            let mut should_no_exist_vars = vec![];
+            #(
+                if std::env::var(#var_names).is_ok() {
+                    should_no_exist_vars.push(#var_names);
+                }
+            )*
+            match should_no_exist_vars.len() {
+                0 => #ident(),
+                1 => return Err(
+                    format!("{}because variable {} found",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
+                ).into()),
+                _ => return Err(
+                    format!("{}because following variables found:\n{}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
+                ).into()),
+            }
+            Ok(())
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
 }
 
 /// Run test case when the file exist.
