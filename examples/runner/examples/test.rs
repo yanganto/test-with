@@ -39,7 +39,7 @@ mod env {
 
     #[test_with::runtime_no_env(GITHUB_ACTIONS)]
     fn test_ignore_in_github_action() {
-        //This will be ignored in GITHUB_ACTION;
+        panic!("should be ignored in github action")
     }
 }
 
