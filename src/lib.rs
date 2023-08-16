@@ -22,7 +22,8 @@
 //! as an example, then use `cargo run --example`
 //! The `test-with` need be included as normal dependency with `runtime` feature.
 //! [macro@runner] and [macro@module] are for the basic skeleton of the test runner.
-//! [macro@runtime_env], [macro@runtime_no_env] are used to transform a normal function to a
+//! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file] and [macro@runtime_path] are
+//! used to transform a normal function to a
 //! testcase.
 //!
 //! ```toml
@@ -141,6 +142,7 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
     (missing_vars.is_empty(), ignore_msg)
 }
 
+/// Run test case when the example running and the environment variable is set.
 ///```rust
 /// // write as example in exmaples/*rs
 /// test_with::runner!(env);
@@ -152,6 +154,12 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
 ///     }
 /// }
 ///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_env(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
@@ -240,6 +248,7 @@ fn check_no_env_condition(attr_str: String) -> (bool, String) {
     (true, String::new())
 }
 
+/// Ignore test case when the example running and the environment variable is set.
 ///```rust
 /// // write as example in exmaples/*rs
 /// test_with::runner!(env);
@@ -251,6 +260,12 @@ fn check_no_env_condition(attr_str: String) -> (bool, String) {
 ///     }
 /// }
 ///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_no_env(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
@@ -360,6 +375,7 @@ fn check_file_condition(attr_str: String) -> (bool, String) {
     (missing_files.is_empty(), ignore_msg)
 }
 
+/// Run test case when the example running and the file exist.
 ///```rust
 /// // write as example in exmaples/*rs
 /// test_with::runner!(file);
@@ -371,6 +387,12 @@ fn check_file_condition(attr_str: String) -> (bool, String) {
 ///     }
 /// }
 ///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_file(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
@@ -481,6 +503,7 @@ fn check_path_condition(attr_str: String) -> (bool, String) {
     (missing_paths.is_empty(), ignore_msg)
 }
 
+/// Run test case when the example running and the path(file or folder) exist.
 ///```rust
 /// // write as example in exmaples/*rs
 /// test_with::runner!(path);
@@ -492,6 +515,12 @@ fn check_path_condition(attr_str: String) -> (bool, String) {
 ///     }
 /// }
 ///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_path(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
@@ -1191,6 +1220,32 @@ fn check_executable_condition(attr_str: String) -> (bool, String) {
     (missing_executables.is_empty(), ignore_msg)
 }
 
+/// Provid a test runner and test on each module
+///```rust
+/// // example/run-test.rs
+///
+/// test_with::runner!(module1, module2);
+/// #[test_with::module]
+/// mod module1 {
+///     #[test_with::runtime_env(PWD)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///
+/// #[test_with::module]
+/// mod module2 {
+///     #[test_with::runtime_env(PWD)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro]
+pub fn runner(_input: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro]
 pub fn runner(input: TokenStream) -> TokenStream {
@@ -1212,6 +1267,34 @@ pub fn runner(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Help each function with `#[test_with::runtime_*]` in the module can regist to run
+///
+///```rust
+/// // example/run-test.rs
+///
+/// test_with::runner!(module1, module2);
+/// #[test_with::module]
+/// mod module1 {
+///     #[test_with::runtime_env(PWD)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///
+/// #[test_with::module]
+/// mod module2 {
+///     #[test_with::runtime_env(PWD)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn module(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
