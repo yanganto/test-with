@@ -45,7 +45,3 @@ executable = ["which"]
 [dev-dependencies]
 tokio = { version = "1.15.0", features = ["rt", "macros"] }
 serial_test = "2.0.0"
-
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
