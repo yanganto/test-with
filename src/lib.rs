@@ -22,7 +22,8 @@
 //! as an example, then use `cargo run --example`
 //! The `test-with` need be included as normal dependency with `runtime` feature.
 //! [macro@runner] and [macro@module] are for the basic skeleton of the test runner.
-//! [macro@runtime_env], [macro@runtime_no_env] are used to transform a normal function to a
+//! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file] and [macro@runtime_path] are
+//! used to transform a normal function to a
 //! testcase.
 //!
 //! ```toml
@@ -141,6 +142,7 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
     (missing_vars.is_empty(), ignore_msg)
 }
 
+/// Run test case when the example running and the environment variable is set.
 ///```rust
 /// // write as example in exmaples/*rs
 /// test_with::runner!(env);
@@ -152,6 +154,12 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
 ///     }
 /// }
 ///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_env(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
@@ -240,6 +248,7 @@ fn check_no_env_condition(attr_str: String) -> (bool, String) {
     (true, String::new())
 }
 
+/// Ignore test case when the example running and the environment variable is set.
 ///```rust
 /// // write as example in exmaples/*rs
 /// test_with::runner!(env);
@@ -251,6 +260,12 @@ fn check_no_env_condition(attr_str: String) -> (bool, String) {
 ///     }
 /// }
 ///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_no_env(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
@@ -360,6 +375,70 @@ fn check_file_condition(attr_str: String) -> (bool, String) {
     (missing_files.is_empty(), ignore_msg)
 }
 
+/// Run test case when the example running and the file exist.
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(file);
+/// #[test_with::module]
+/// mod file {
+///     #[test_with::runtime_file(/etc/hostname)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_file(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(feature = "runtime")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let files: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            let mut missing_files = vec![];
+            #(
+                if !std::path::Path::new(#files.trim_matches('"')).is_file() {
+                    missing_files.push(#files);
+                }
+            )*
+
+            match missing_files.len() {
+                0 => #ident(),
+                1 => return Err(
+                    format!("{}because file not found: {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
+                ).into()),
+                _ => return Err(
+                    format!("{}because following files not found: \n{}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
+                ).into()),
+            }
+            Ok(())
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
+}
+
 /// Run test case when the path(file or folder) exist.
 /// ```
 /// #[cfg(test)]
@@ -422,6 +501,70 @@ fn check_path_condition(attr_str: String) -> (bool, String) {
         )
     };
     (missing_paths.is_empty(), ignore_msg)
+}
+
+/// Run test case when the example running and the path(file or folder) exist.
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(path);
+/// #[test_with::module]
+/// mod path {
+///     #[test_with::runtime_path(/etc)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_path(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(feature = "runtime")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let paths: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            let mut missing_paths = vec![];
+            #(
+                if std::fs::metadata(#paths.trim_matches('"')).is_err() {
+                    missing_paths.push(#paths.to_string());
+                }
+            )*
+
+            match missing_paths.len() {
+                0 => #ident(),
+                1 => return Err(
+                    format!("{}because path not found: {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
+                ).into()),
+                _ => return Err(
+                    format!("{}because following paths not found: \n{}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
+                ).into()),
+            }
+            Ok(())
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
 }
 
 /// Run test case when the http service exist.
@@ -1077,13 +1220,39 @@ fn check_executable_condition(attr_str: String) -> (bool, String) {
     (missing_executables.is_empty(), ignore_msg)
 }
 
+/// Provide a test runner and test on each module
+///```rust
+/// // example/run-test.rs
+///
+/// test_with::runner!(module1, module2);
+/// #[test_with::module]
+/// mod module1 {
+///     #[test_with::runtime_env(PWD)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///
+/// #[test_with::module]
+/// mod module2 {
+///     #[test_with::runtime_env(PWD)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro]
+pub fn runner(_input: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro]
 pub fn runner(input: TokenStream) -> TokenStream {
     let input_str = input.to_string();
     let mod_names: Vec<syn::Ident> = input_str
         .split(",")
-        .map(|s| syn::Ident::new(s, proc_macro2::Span::call_site()))
+        .map(|s| syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
         .collect();
     quote::quote! {
         fn main() {
@@ -1098,6 +1267,34 @@ pub fn runner(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Help each function with `#[test_with::runtime_*]` in the module can register to run
+///
+///```rust
+/// // example/run-test.rs
+///
+/// test_with::runner!(module1, module2);
+/// #[test_with::module]
+/// mod module1 {
+///     #[test_with::runtime_env(PWD)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///
+/// #[test_with::module]
+/// mod module2 {
+///     #[test_with::runtime_env(PWD)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+///```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn module(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
