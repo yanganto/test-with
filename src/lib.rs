@@ -1220,7 +1220,7 @@ fn check_executable_condition(attr_str: String) -> (bool, String) {
     (missing_executables.is_empty(), ignore_msg)
 }
 
-/// Provid a test runner and test on each module
+/// Provide a test runner and test on each module
 ///```rust
 /// // example/run-test.rs
 ///
@@ -1267,7 +1267,7 @@ pub fn runner(input: TokenStream) -> TokenStream {
     .into()
 }
 
-/// Help each function with `#[test_with::runtime_*]` in the module can regist to run
+/// Help each function with `#[test_with::runtime_*]` in the module can register to run
 ///
 ///```rust
 /// // example/run-test.rs
