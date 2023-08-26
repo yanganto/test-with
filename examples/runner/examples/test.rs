@@ -1,9 +1,9 @@
-test_with::runner!(env, file, path);
+test_with::runner!(env, file, path, net);
 
 #[test_with::module]
 mod env {
     #[test_with::runtime_env(PWD)]
-    fn test_works() {
+    fn env_test_works() {
         assert!(true);
     }
 
@@ -28,7 +28,7 @@ mod env {
     // }
 
     #[test_with::runtime_env(PWD, SAYING)]
-    fn test_works_too() {
+    fn env_test_works_too() {
         assert!(true);
     }
 
@@ -46,7 +46,7 @@ mod env {
 #[test_with::module]
 mod file {
     #[test_with::runtime_file(/etc/hostname)]
-    fn test_works() {
+    fn file_test_works() {
         assert!(true);
     }
 }
@@ -55,6 +55,18 @@ mod file {
 mod path {
     #[test_with::runtime_path(/no_existing)]
     fn test_not_works() {
+        assert!(true);
+    }
+}
+
+#[test_with::module]
+mod net {
+    #[test_with::runtime_http(httpbin.org)]
+    fn http_test_works() {
+        assert!(true);
+    }
+    #[test_with::runtime_https(httpbin.org)]
+    fn https_test_works() {
         assert!(true);
     }
 }

@@ -22,7 +22,8 @@
 //! as an example, then use `cargo run --example`
 //! The `test-with` need be included as normal dependency with `runtime` feature.
 //! [macro@runner] and [macro@module] are for the basic skeleton of the test runner.
-//! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file] and [macro@runtime_path] are
+//! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file], [macro@runtime_path] and
+//! [macro@runtime_http] are
 //! used to transform a normal function to a
 //! testcase.
 //!
@@ -57,6 +58,7 @@ use syn::{parse_macro_input, ItemFn, ItemMod};
 
 #[cfg(feature = "runtime")]
 use syn::Item;
+
 #[cfg(feature = "resource")]
 use sysinfo::SystemExt;
 #[cfg(feature = "executable")]
@@ -627,6 +629,71 @@ fn check_http_condition(attr_str: String) -> (bool, String) {
     (missing_links.is_empty(), ignore_msg)
 }
 
+/// Run test case when the example running and the http service exist.
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(http);
+/// #[test_with::module]
+/// mod http {
+///     #[test_with::runtime_http(httpbin.org)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_http(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime", feature = "http"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let links: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+
+            let mut missing_links = vec![];
+            let client = libtest_with::reqwest::blocking::Client::new();
+            #(
+                if client.head(&format!("http://{}", #links)).send().is_err() {
+                    missing_links.push(format!("http://{}", #links));
+                }
+            )*
+            match missing_links.len() {
+                0 => #ident(),
+                1 => return Err(
+                    format!("{}because {} not response",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
+                ).into()),
+                _ => return Err(
+                    format!("{}because following links not response: \n{}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
+                ).into()),
+            }
+            Ok(())
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
+}
+
 /// Run test case when the https service exist.
 /// ```
 /// #[cfg(test)]
@@ -685,6 +752,71 @@ fn check_https_condition(attr_str: String) -> (bool, String) {
         )
     };
     (missing_links.is_empty(), ignore_msg)
+}
+
+/// Run test case when the example running and the http service exist.
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(http);
+/// #[test_with::module]
+/// mod http {
+///     #[test_with::runtime_https(httpbin.org)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_https(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime", feature = "http"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let links: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+
+            let mut missing_links = vec![];
+            let client = libtest_with::reqwest::blocking::Client::new();
+            #(
+                if client.head(&format!("https://{}", #links)).send().is_err() {
+                    missing_links.push(format!("https://{}", #links));
+                }
+            )*
+            match missing_links.len() {
+                0 => #ident(),
+                1 => return Err(
+                    format!("{}because {} not response",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
+                ).into()),
+                _ => return Err(
+                    format!("{}because following links not response: \n{}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
+                ).into()),
+            }
+            Ok(())
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
 }
 
 /// Run test case when the server online.
