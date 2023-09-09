@@ -886,6 +886,72 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
     (missing_ips.is_empty(), ignore_msg)
 }
 
+/// Run test case when the server online.
+/// Please make sure the role of test case runner have capability to open socket
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(icmp);
+/// #[test_with::module]
+/// mod icmp {
+///     // 193.194.195.196 is offline
+///     #[test_with::runtime_icmp(193.194.195.196)]
+///     fn test_ignored_with_non_existing_host() {
+///         panic!("should be ignored with non existing host")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_icmp(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime", feature = "icmp"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let ips: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+
+            let mut missing_ips = vec![];
+            #(
+                if libtest_with::ping::ping(#ips, None, None, None, None, None).is_err() {
+                    missing_ips.push(#ips);
+                }
+            )*
+            match missing_ips.len() {
+                0 => #ident(),
+                1 => return Err(
+                    format!("{}because {} not response",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
+                ).into()),
+                _ => return Err(
+                    format!("{}because following ips not response: \n{}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
+                ).into()),
+            }
+            Ok(())
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
+}
+
 /// Run test case when socket connected
 ///
 /// ```
