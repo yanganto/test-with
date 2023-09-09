@@ -73,4 +73,8 @@ mod net {
     fn test_ignored_with_non_existing_host() {
         panic!("should be ignored with non existing host")
     }
+    #[test_with::runtime_tcp(8.8.8.8:53)]
+    fn test_works_with_domain_name_server() {
+        assert!(true);
+    }
 }

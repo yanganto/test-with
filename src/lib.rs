@@ -1010,6 +1010,71 @@ fn check_tcp_condition(attr_str: String) -> (bool, String) {
     (missing_sockets.is_empty(), ignore_msg)
 }
 
+/// Run test case when socket connected
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(tcp);
+/// #[test_with::module]
+/// mod tcp {
+///     // Google DNS is online
+///     #[test_with::runtime_tcp(8.8.8.8:53)]
+///     fn test_works_with_DNS_server() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_tcp(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let sockets: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+
+            let mut missing_sockets = vec![];
+            #(
+                if std::net::TcpStream::connect(#sockets).is_err() {
+                    missing_sockets.push(#sockets);
+                }
+            )*
+            match missing_sockets.len() {
+                0 => #ident(),
+                1 => return Err(
+                    format!("{}because {} not response",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets[0]
+                ).into()),
+                _ => return Err(
+                    format!("{}because following sockets not response: \n{}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets.join(", ")
+                ).into()),
+            }
+            Ok(())
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
+}
+
 /// Run test case when runner is root
 ///
 /// ```
