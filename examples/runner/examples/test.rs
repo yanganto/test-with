@@ -78,3 +78,11 @@ mod net {
         assert!(true);
     }
 }
+
+#[test_with::module]
+mod user {
+    #[test_with::runtime_root()]
+    fn test_ignored_by_normal_user() {
+        panic!("should be ignored")
+    }
+}

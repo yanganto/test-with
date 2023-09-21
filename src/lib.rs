@@ -1117,6 +1117,57 @@ fn check_root_condition(_attr_str: String) -> (bool, String) {
     )
 }
 
+/// Run test case when runner is root
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(user);
+/// #[test_with::module]
+/// mod user {
+///     // Google DNS is online
+///     #[test_with::runtime_root()]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_root(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "user", not(target_os = "windows")))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_root(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let sockets: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            if 0 = libtest_with::users::get_current_uid() {
+                #ident()
+            } else {
+                Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into()),
+            }
+            Ok(())
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
+}
+
 /// Run test case when runner in group
 ///
 /// ```
