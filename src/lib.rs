@@ -31,7 +31,7 @@
 //! ```toml
 //! [dependencies]
 //! test-with = { version = "*", default-features = false, features = ["runtime"] }
-//! libtest-with = { version = "0.6.1-1", features = ["net", "resource", "user", "executable"] }
+//! libtest-with = { version = "0.6.1-2", features = ["net", "resource", "user", "executable"] }
 //! ```
 //!
 //! ```rust
@@ -190,17 +190,19 @@ pub fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
                 }
             )*
             match missing_vars.len() {
-                0 => #ident(),
-                1 => return Err(
+                0 => {
+                    #ident();
+                    Ok(())
+                },
+                1 => Err(
                     format!("{}because variable {} not found",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
                 ).into()),
-                _ => return Err(
+                _ => Err(
                     format!("{}because following variables not found:\n{}\n",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
                 ).into()),
             }
-            Ok(())
         }
 
         #(#attrs)*
@@ -296,17 +298,19 @@ pub fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
                 }
             )*
             match should_no_exist_vars.len() {
-                0 => #ident(),
-                1 => return Err(
+                0 => {
+                    #ident();
+                    Ok(())
+                },
+                1 => Err(
                     format!("{}because variable {} found",
                             libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
                 ).into()),
-                _ => return Err(
+                _ => Err(
                     format!("{}because following variables found:\n{}\n",
                             libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
                 ).into()),
             }
-            Ok(())
         }
 
         #(#attrs)*
@@ -424,17 +428,19 @@ pub fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStream {
             )*
 
             match missing_files.len() {
-                0 => #ident(),
-                1 => return Err(
+                0 => {
+                    #ident();
+                    Ok(())
+                },
+                1 => Err(
                     format!("{}because file not found: {}",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
                 ).into()),
-                _ => return Err(
+                _ => Err(
                     format!("{}because following files not found: \n{}\n",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
                 ).into()),
             }
-            Ok(())
         }
 
         #(#attrs)*
@@ -552,17 +558,19 @@ pub fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStream {
             )*
 
             match missing_paths.len() {
-                0 => #ident(),
-                1 => return Err(
+                0 => {
+                    #ident();
+                    Ok(())
+                },
+                1 => Err(
                     format!("{}because path not found: {}",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
                 ).into()),
-                _ => return Err(
+                _ => Err(
                     format!("{}because following paths not found: \n{}\n",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
                 ).into()),
             }
-            Ok(())
         }
 
         #(#attrs)*
@@ -677,17 +685,19 @@ pub fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStream {
                 }
             )*
             match missing_links.len() {
-                0 => #ident(),
-                1 => return Err(
+                0 => {
+                    #ident();
+                    Ok(())
+                },
+                1 => Err(
                     format!("{}because {} not response",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
                 ).into()),
-                _ => return Err(
+                _ => Err(
                     format!("{}because following links not response: \n{}\n",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
                 ).into()),
             }
-            Ok(())
         }
 
         #(#attrs)*
@@ -802,17 +812,19 @@ pub fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStream {
                 }
             )*
             match missing_links.len() {
-                0 => #ident(),
-                1 => return Err(
+                0 => {
+                    #ident();
+                    Ok(())
+                },
+                1 => Err(
                     format!("{}because {} not response",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
                 ).into()),
-                _ => return Err(
+                _ => Err(
                     format!("{}because following links not response: \n{}\n",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
                 ).into()),
             }
-            Ok(())
         }
 
         #(#attrs)*
@@ -928,22 +940,25 @@ pub fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
             let mut missing_ips = vec![];
             #(
-                if libtest_with::ping::ping(#ips, None, None, None, None, None).is_err() {
+                if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
                     missing_ips.push(#ips);
                 }
             )*
             match missing_ips.len() {
-                0 => #ident(),
-                1 => return Err(
+                0 => {
+                    #ident();
+                    Ok(())
+                }
+                ,
+                1 => Err(
                     format!("{}because {} not response",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
                 ).into()),
-                _ => return Err(
+                _ => Err(
                     format!("{}because following ips not response: \n{}\n",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
                 ).into()),
             }
-            Ok(())
         }
 
         #(#attrs)*
@@ -1056,17 +1071,19 @@ pub fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
                 }
             )*
             match missing_sockets.len() {
-                0 => #ident(),
-                1 => return Err(
+                0 => {
+                    #ident();
+                    Ok(())
+                },
+                1 => Err(
                     format!("{}because {} not response",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets[0]
                 ).into()),
-                _ => return Err(
+                _ => Err(
                     format!("{}because following sockets not response: \n{}\n",
                             libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets.join(", ")
                 ).into()),
             }
-            Ok(())
         }
 
         #(#attrs)*
@@ -1115,6 +1132,55 @@ fn check_root_condition(_attr_str: String) -> (bool, String) {
         current_user_id == 0,
         "because this case should run with root".into(),
     )
+}
+
+/// Run test case when runner is root
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(user);
+/// #[test_with::module]
+/// mod user {
+///     // Google DNS is online
+///     #[test_with::runtime_root()]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_root(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "user", not(target_os = "windows")))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            if 0 == libtest_with::users::get_current_uid() {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
 }
 
 /// Run test case when runner in group
@@ -1174,6 +1240,74 @@ fn check_group_condition(group_name: String) -> (bool, String) {
     )
 }
 
+/// Run test case when runner in group
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(user);
+/// #[test_with::module]
+/// mod user {
+///     // Only works with group avengers
+///     #[test_with::runtime_group(avengers)]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_group(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "user", not(target_os = "windows")))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let group_name = attr.to_string().replace(' ', "");
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            let current_user_id = libtest_with::users::get_current_uid();
+            let in_group = match libtest_with::users::get_user_by_uid(current_user_id) {
+                Some(user) => {
+                    let mut in_group = false;
+                    for group in user.groups().expect("user not found") {
+                        if in_group {
+                            break;
+                        }
+                        in_group |= group.name().to_string_lossy() == #group_name;
+                    }
+                    in_group
+                }
+                None => false,
+            };
+
+            if in_group {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because this case should run user in group {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
+}
+
 /// Run test case when runner is specific user
 ///
 /// ```
@@ -1218,6 +1352,64 @@ fn check_user_condition(user_name: String) -> (bool, String) {
         is_user,
         format!("because this case should run with user {}", user_name),
     )
+}
+
+/// Run test case when runner is specific user
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(user);
+/// #[test_with::module]
+/// mod user {
+///     // Only works with user
+///     #[test_with::runtime_user(spider)]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_user(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "user", not(target_os = "windows")))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let user_name = attr.to_string().replace(' ', "");
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            let is_user = match libtest_with::users::get_current_username() {
+                Some(uname) => uname.to_string_lossy() == #user_name,
+                None => false,
+            };
+
+            if is_user {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because this case should run with user {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
 }
 
 /// Run test case when memory size enough

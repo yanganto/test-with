@@ -1,4 +1,4 @@
-test_with::runner!(env, file, path, net);
+test_with::runner!(env, file, path, net, user);
 
 #[test_with::module]
 mod env {
@@ -76,5 +76,21 @@ mod net {
     #[test_with::runtime_tcp(8.8.8.8:53)]
     fn test_works_with_domain_name_server() {
         assert!(true);
+    }
+}
+
+#[test_with::module]
+mod user {
+    #[test_with::runtime_root()]
+    fn test_ignored_by_normal_user() {
+        panic!("should be ignored")
+    }
+    #[test_with::runtime_group(avengers)]
+    fn test_ignored_by_normal_person() {
+        panic!("should be ignored")
+    }
+    #[test_with::runtime_user(spider)]
+    fn test_ignored_by_normal_man() {
+        panic!("should be ignored")
     }
 }
