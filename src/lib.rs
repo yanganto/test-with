@@ -1354,6 +1354,64 @@ fn check_user_condition(user_name: String) -> (bool, String) {
     )
 }
 
+/// Run test case when runner is specific user
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(user);
+/// #[test_with::module]
+/// mod user {
+///     // Only works with user
+///     #[test_with::runtime_user(spider)]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_user(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "user", not(target_os = "windows")))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let user_name = attr.to_string().replace(' ', "");
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            let is_user = match libtest_with::users::get_current_username() {
+                Some(uname) => uname.to_string_lossy() == #user_name,
+                None => false,
+            };
+
+            if is_user {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because this case should run with user {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
+}
+
 /// Run test case when memory size enough
 ///
 /// ```

@@ -89,4 +89,8 @@ mod user {
     fn test_ignored_by_normal_person() {
         panic!("should be ignored")
     }
+    #[test_with::runtime_user(spider)]
+    fn test_ignored_by_normal_man() {
+        panic!("should be ignored")
+    }
 }
