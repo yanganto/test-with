@@ -1,4 +1,4 @@
-test_with::runner!(env, file, path, net);
+test_with::runner!(env, file, path, net, user);
 
 #[test_with::module]
 mod env {
@@ -83,6 +83,10 @@ mod net {
 mod user {
     #[test_with::runtime_root()]
     fn test_ignored_by_normal_user() {
+        panic!("should be ignored")
+    }
+    #[test_with::runtime_group(avengers)]
+    fn test_ignored_by_normal_person() {
         panic!("should be ignored")
     }
 }
