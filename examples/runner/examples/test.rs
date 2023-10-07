@@ -1,4 +1,4 @@
-test_with::runner!(env, file, path, net, user);
+test_with::runner!(env, file, path, net, user, exe);
 
 #[test_with::module]
 mod env {
@@ -92,5 +92,14 @@ mod user {
     #[test_with::runtime_user(spider)]
     fn test_ignored_by_normal_man() {
         panic!("should be ignored")
+    }
+}
+
+#[test_with::module]
+mod exe {
+    // `/bin/sh` executable exists
+    #[test_with::runtime_executable(/bin/sh)]
+    fn test_executable_with_path() {
+        assert!(true);
     }
 }
