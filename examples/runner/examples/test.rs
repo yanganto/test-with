@@ -1,4 +1,4 @@
-test_with::runner!(env, file, path, net, user, exe);
+test_with::runner!(env, file, path, net, user, exe, resource);
 
 #[test_with::module]
 mod env {
@@ -101,5 +101,50 @@ mod exe {
     #[test_with::runtime_executable(/bin/sh)]
     fn test_executable_with_path() {
         assert!(true);
+    }
+}
+
+#[test_with::module]
+mod resource {
+    // Only works with enough cpu core
+    #[test_with::runtime_cpu_core(32)]
+    fn test_ignored_core_not_enough() {
+        panic!("should be ignored")
+    }
+
+    // Only works with enough physical cpu core
+    #[test_with::runtime_phy_cpu_core(32)]
+    fn test_ignored_phy_core_not_enough() {
+        panic!("should be ignored")
+    }
+
+    // Only works with enough memory size
+    #[test_with::runtime_mem(100GB)]
+    fn test_ignored_mem_not_enough() {
+        panic!("should be ignored")
+    }
+
+    // Only works with enough free memory size
+    #[test_with::runtime_free_mem(100GB)]
+    fn test_ignored_free_mem_not_enough() {
+        panic!("should be ignored")
+    }
+
+    // Only works with enough available memory size
+    #[test_with::runtime_available_mem(100GB)]
+    fn test_ignored_available_mem_not_enough() {
+        panic!("should be ignored")
+    }
+
+    // Only works with enough swap size
+    #[test_with::runtime_swap(100GB)]
+    fn test_ignored_swap_not_enough() {
+        panic!("should be ignored")
+    }
+
+    // Only works with enough free swap size
+    #[test_with::runtime_free_swap(100GB)]
+    fn test_ignored_free_swap_not_enough() {
+        panic!("should be ignored")
     }
 }
