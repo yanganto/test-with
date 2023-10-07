@@ -898,7 +898,7 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
     (missing_ips.is_empty(), ignore_msg)
 }
 
-/// Run test case when the server online.
+/// Run test case when the example running and the server online.
 /// Please make sure the role of test case runner have capability to open socket
 ///```rust
 /// // write as example in exmaples/*rs
@@ -1025,7 +1025,7 @@ fn check_tcp_condition(attr_str: String) -> (bool, String) {
     (missing_sockets.is_empty(), ignore_msg)
 }
 
-/// Run test case when socket connected
+/// Run test case when the example running and socket connected
 ///```rust
 /// // write as example in exmaples/*rs
 /// test_with::runner!(tcp);
