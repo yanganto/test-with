@@ -1677,6 +1677,73 @@ fn check_executable_condition(attr_str: String) -> (bool, String) {
     (missing_executables.is_empty(), ignore_msg)
 }
 
+/// Run test case when runner in group
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(exe);
+/// #[test_with::module]
+/// mod exe {
+///     // `/bin/sh` executable exists
+///     #[test_with::runtime_executable(/bin/sh)]
+///     fn test_executable_with_path() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_executable(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "executable"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let executables: Vec<&str> = attr_str.split(',').collect();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            let mut missing_executables = vec![];
+            #(
+                if libtest_with::which::which(#executables).is_err() {
+                    missing_executables.push(#executables);
+                }
+            )*
+            match missing_executables.len() {
+                0 => {
+                    #ident();
+                    Ok(())
+                },
+                1 => Err(
+                    format!("{}because executable {} not found",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
+                ).into()),
+                _ => Err(
+                    format!("{}because following executables not found:\n{}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
+                ).into()),
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+
+    }
+    .into()
+}
+
 /// Provide a test runner and test on each module
 ///```rust
 /// // example/run-test.rs
