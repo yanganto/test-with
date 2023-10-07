@@ -898,7 +898,7 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
     (missing_ips.is_empty(), ignore_msg)
 }
 
-/// Run test case when the server online.
+/// Run test case when the example running and the server online.
 /// Please make sure the role of test case runner have capability to open socket
 ///```rust
 /// // write as example in exmaples/*rs
@@ -1025,7 +1025,7 @@ fn check_tcp_condition(attr_str: String) -> (bool, String) {
     (missing_sockets.is_empty(), ignore_msg)
 }
 
-/// Run test case when socket connected
+/// Run test case when the example running and socket connected
 ///```rust
 /// // write as example in exmaples/*rs
 /// test_with::runner!(tcp);
@@ -1463,6 +1463,201 @@ fn check_mem_condition(mem_size_str: String) -> (bool, String) {
     )
 }
 
+/// Run test case when the example running and memory size enough
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(resource);
+/// #[test_with::module]
+/// mod resource {
+///     // Only works with enough memory size
+///     #[test_with::runtime_mem(100GB)]
+///     fn test_ignored_mem_not_enough() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "resource"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let mem_limitation_str = attr.to_string().replace(' ', "");
+    if byte_unit::Byte::from_str(&mem_limitation_str).is_err() {
+        abort_call_site!("memory size description is not correct")
+    }
+
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            use libtest_with::sysinfo::SystemExt;
+            let mut sys = libtest_with::sysinfo::System::new_all();
+            sys.refresh_all();
+            let mem_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.total_memory())) {
+                Ok(b) => b,
+                Err(_) => panic!("system memory size can not get"),
+            };
+            let mem_size_limitation = libtest_with::byte_unit::Byte::from_str(#mem_limitation_str).expect("mem limitation should correct");
+            if  mem_size >= mem_size_limitation {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because the memory less than {}",
+                        libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+
+    }
+    .into()
+}
+
+/// Run test case when the example running and free memory size enough
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(resource);
+/// #[test_with::module]
+/// mod resource {
+///     // Only works with enough free memory size
+///     #[test_with::runtime_free_mem(100GB)]
+///     fn test_ignored_free_mem_not_enough() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_free_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "resource"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let mem_limitation_str = attr.to_string().replace(' ', "");
+    if byte_unit::Byte::from_str(&mem_limitation_str).is_err() {
+        abort_call_site!("memory size description is not correct")
+    }
+
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            use libtest_with::sysinfo::SystemExt;
+            let mut sys = libtest_with::sysinfo::System::new_all();
+            sys.refresh_all();
+            let mem_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.free_memory())) {
+                Ok(b) => b,
+                Err(_) => panic!("system memory size can not get"),
+            };
+            let mem_size_limitation = libtest_with::byte_unit::Byte::from_str(#mem_limitation_str).expect("mem limitation should correct");
+            if  mem_size >= mem_size_limitation {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because the memory less than {}",
+                        libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+
+    }
+    .into()
+}
+
+/// Run test case when the example running and available memory size enough
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(resource);
+/// #[test_with::module]
+/// mod resource {
+///     // Only works with enough available memory size
+///     #[test_with::runtime_available_mem(100GB)]
+///     fn test_ignored_available_mem_not_enough() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_available_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "resource"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let mem_limitation_str = attr.to_string().replace(' ', "");
+    if byte_unit::Byte::from_str(&mem_limitation_str).is_err() {
+        abort_call_site!("memory size description is not correct")
+    }
+
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            use libtest_with::sysinfo::SystemExt;
+            let mut sys = libtest_with::sysinfo::System::new_all();
+            sys.refresh_all();
+            let mem_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.available_memory())) {
+                Ok(b) => b,
+                Err(_) => panic!("system memory size can not get"),
+            };
+            let mem_size_limitation = libtest_with::byte_unit::Byte::from_str(#mem_limitation_str).expect("mem limitation should correct");
+            if  mem_size >= mem_size_limitation {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because the memory less than {}",
+                        libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+
+    }
+    .into()
+}
+
 /// Run test case when swap size enough
 ///
 /// ```
@@ -1514,6 +1709,136 @@ fn check_swap_condition(swap_size_str: String) -> (bool, String) {
     )
 }
 
+/// Run test case when the example running and swap enough
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(resource);
+/// #[test_with::module]
+/// mod resource {
+///     // Only works with enough swap size
+///     #[test_with::runtime_swap(100GB)]
+///     fn test_ignored_swap_not_enough() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_swap(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "resource"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let swap_limitation_str = attr.to_string().replace(' ', "");
+    if byte_unit::Byte::from_str(&swap_limitation_str).is_err() {
+        abort_call_site!("swap size description is not correct")
+    }
+
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            use libtest_with::sysinfo::SystemExt;
+            let mut sys = libtest_with::sysinfo::System::new_all();
+            sys.refresh_all();
+            let swap_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.total_swap())) {
+                Ok(b) => b,
+                Err(_) => panic!("system swap size can not get"),
+            };
+            let swap_size_limitation = libtest_with::byte_unit::Byte::from_str(#swap_limitation_str).expect("swap limitation should correct");
+            if  swap_size >= swap_size_limitation {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because the swap less than {}",
+                        libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+
+    }
+    .into()
+}
+
+/// Run test case when the example running and free swap enough
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(resource);
+/// #[test_with::module]
+/// mod resource {
+///     // Only works with enough free swap size
+///     #[test_with::runtime_free_swap(100GB)]
+///     fn test_ignored_free_swap_not_enough() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_free_swap(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "resource"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let swap_limitation_str = attr.to_string().replace(' ', "");
+    if byte_unit::Byte::from_str(&swap_limitation_str).is_err() {
+        abort_call_site!("swap size description is not correct")
+    }
+
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            use libtest_with::sysinfo::SystemExt;
+            let mut sys = libtest_with::sysinfo::System::new_all();
+            sys.refresh_all();
+            let swap_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.free_swap())) {
+                Ok(b) => b,
+                Err(_) => panic!("system swap size can not get"),
+            };
+            let swap_size_limitation = libtest_with::byte_unit::Byte::from_str(#swap_limitation_str).expect("swap limitation should correct");
+            if  swap_size >= swap_size_limitation {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because the swap less than {}",
+                        libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+
+    }
+    .into()
+}
+
 /// Run test case when cpu core enough
 ///
 /// ```
@@ -1556,6 +1881,64 @@ fn check_cpu_core_condition(core_limitation_str: String) -> (bool, String) {
         },
         format!("because the cpu core less than {}", core_limitation_str),
     )
+}
+
+/// Run test case when cpu core enough
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(resource);
+/// #[test_with::module]
+/// mod resource {
+///     // Only works with enough cpu core
+///     #[test_with::runtime_cpu_core(32)]
+///     fn test_ignored_core_not_enough() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_cpu_core(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "resource"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let core_limitation = match attr_str.parse::<usize>() {
+        Ok(c) => c,
+        Err(_) => abort_call_site!("core limitation is incorrect"),
+    };
+
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            if libtest_with::num_cpus::get() >= #core_limitation {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because the cpu core less than {}",
+                        libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+
+    }
+    .into()
 }
 
 /// Run test case when physical cpu core enough
@@ -1603,6 +1986,64 @@ fn check_phy_core_condition(core_limitation_str: String) -> (bool, String) {
             core_limitation_str
         ),
     )
+}
+
+/// Run test case when physical core enough
+///```rust
+/// // write as example in exmaples/*rs
+/// test_with::runner!(resource);
+/// #[test_with::module]
+/// mod resource {
+///     // Only works with enough physical cpu core
+///     #[test_with::runtime_phy_cpu_core(32)]
+///     fn test_ignored_phy_core_not_enough() {
+///         panic!("should be ignored")
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_phy_cpu_core(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(all(feature = "runtime", feature = "resource"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string().replace(' ', "");
+    let core_limitation = match attr_str.parse::<usize>() {
+        Ok(c) => c,
+        Err(_) => abort_call_site!("physical core limitation is incorrect"),
+    };
+
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            if libtest_with::num_cpus::get_physical() >= #core_limitation {
+                #ident();
+                Ok(())
+            } else {
+                Err(format!("{}because the physical cpu core less than {}",
+                        libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+
+    }
+    .into()
 }
 
 /// Run test case when the executables exist.
@@ -1677,7 +2118,7 @@ fn check_executable_condition(attr_str: String) -> (bool, String) {
     (missing_executables.is_empty(), ignore_msg)
 }
 
-/// Run test case when runner in group
+/// Run test case when the executable existing
 ///```rust
 /// // write as example in exmaples/*rs
 /// test_with::runner!(exe);
