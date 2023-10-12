@@ -22,7 +22,7 @@ The features you can use are `net`(`http`, `icmp`), `resource`, `user`, `executa
 
 Currently, the condition is checked on build-time not runtime and not perfect and good for most develop scenario,
 because of this [issue][original-issue] of rust-lang.
-Here is the [slides][coscup-slides] of a talk in COSCUP and help you know more about it.
+Here are [slides@COSCUP][coscup-slides] and [slides@COSCON][coscon-slides] to help you know more about it.
 If you really want to check the condition in runtime, please check [runtime section](https://github.com/yanganto/test-with#runtime).
 The `runtime` feature and runtime macros (`test_with::runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`) can help you run the test and check the conditions in runtime.
 
@@ -326,3 +326,4 @@ Please check out the [example/runner](https://github.com/yanganto/test-with/tree
 [rust-pre-rfc]: https://internals.rust-lang.org/t/pre-rfc-provide-ignore-message-when-the-test-ignored/15904
 [known-issue]: https://github.com/yanganto/test-with/issues/18
 [coscup-slides]: http://slides.com/yanganto/rust-ignore
+[coscon-slides]: https://docs.google.com/presentation/d/1SjKdwWk0_YyhrRxV0bcay8PTO5htDRjBu99-tPRkMto/edit?usp=sharing
