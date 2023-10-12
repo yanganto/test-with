@@ -149,13 +149,13 @@ mod resource {
     }
 }
 
-fn something_happend() -> Option<String> {
+fn something_happened() -> Option<String> {
     Some("because something happened".to_string())
 }
 
 #[test_with::module]
 mod custom_mod {
-    #[test_with::runtime_ignore_if(something_happend)]
+    #[test_with::runtime_ignore_if(something_happened)]
     fn test_ignored() {
         assert!(false);
     }
