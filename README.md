@@ -290,6 +290,23 @@ mod module_name {
     fn test_works() {
     }
 }
+```
+
+or you can customized your condition function with `runtime_ignore_if`
+```rust
+test_with::runner!(custom_mod);
+
+fn something_happened() -> Option<String> {
+    Some("because something happened".to_string())
+}
+
+#[test_with::module]
+mod custom_mod {
+    #[test_with::runtime_ignore_if(something_happened)]
+    fn test_ignored() {
+        assert!(false);
+    }
+}
 
 ```
 

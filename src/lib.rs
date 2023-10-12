@@ -23,8 +23,12 @@
 //! The `test-with` need be included as normal dependency with `runtime` feature.
 //! And also include the `libtest-with` with corresponding features in `Cargo.toml`
 //! [macro@runner] and [macro@module] are for the basic skeleton of the test runner.
-//! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file], [macro@runtime_path] and
-//! [macro@runtime_http] are
+//! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file], [macro@runtime_path],
+//! [macro@runtime_http], [macro@runtime_https], [macro@runtime_icmp], [macro@runtime_tcp],
+//! [macro@runtime_root], [macro@runtime_group], [macro@runtime_user], [macro@runtime_mem],
+//! [macro@runtime_free_mem], [macro@runtime_available_mem], [macro@runtime_swap],
+//! [macro@runtime_free_swap], [macro@runtime_available_swap], [macro@runtime_cpu_core],
+//! [macro@runtime_phy_core], [macro@runtime_executable] and [macro@runtime_ignore_if] are
 //! used to transform a normal function to a
 //! testcase.
 //!
@@ -2310,6 +2314,7 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
             quote::quote! {
                 #(#attrs)*
                 #vis #mod_token #ident {
+                    use super::*;
                     pub fn _runtime_tests() -> Vec<libtest_with::Trial> {
                         use libtest_with::Trial;
                         vec![
@@ -2324,4 +2329,62 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
     } else {
         abort_call_site!("should use on mod with context")
     }
+}
+
+/// Ignore test case when function return some reason
+/// The function should be `fn() -> Option<String>`
+/// ```
+/// test_with::runner!(custom_mod);
+///
+/// fn something_happened() -> Option<String> {
+///     Some("because something happened".to_string())
+/// }
+///
+/// #[test_with::module]
+/// mod custom_mod {
+/// #[test_with::runtime_ignore_if(something_happened)]
+/// fn test_ignored() {
+///     assert!(false);
+///     }
+/// }
+/// ```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_ignore_if(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(feature = "runtime")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let ignore_function = syn::Ident::new(
+        &attr.to_string().replace(' ', ""),
+        proc_macro2::Span::call_site(),
+    );
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            if let Some(msg) = #ignore_function() {
+                Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+            } else {
+                #ident();
+                Ok(())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
 }
