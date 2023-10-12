@@ -23,8 +23,12 @@
 //! The `test-with` need be included as normal dependency with `runtime` feature.
 //! And also include the `libtest-with` with corresponding features in `Cargo.toml`
 //! [macro@runner] and [macro@module] are for the basic skeleton of the test runner.
-//! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file], [macro@runtime_path] and
-//! [macro@runtime_http] are
+//! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file], [macro@runtime_path],
+//! [macro@runtime_http], [macro@runtime_https], [macro@runtime_icmp], [macro@runtime_tcp],
+//! [macro@runtime_root], [macro@runtime_group], [macro@runtime_user], [macro@runtime_mem],
+//! [macro@runtime_free_mem], [macro@runtime_available_mem], [macro@runtime_swap],
+//! [macro@runtime_free_swap], [macro@runtime_available_swap], [macro@runtime_cpu_core],
+//! [macro@runtime_phy_core], [macro@runtime_executable] and [macro@runtime_ignore_if] are
 //! used to transform a normal function to a
 //! testcase.
 //!
