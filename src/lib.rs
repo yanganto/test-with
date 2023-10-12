@@ -2310,6 +2310,7 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
             quote::quote! {
                 #(#attrs)*
                 #vis #mod_token #ident {
+                    use super::*;
                     pub fn _runtime_tests() -> Vec<libtest_with::Trial> {
                         use libtest_with::Trial;
                         vec![
@@ -2324,4 +2325,62 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
     } else {
         abort_call_site!("should use on mod with context")
     }
+}
+
+/// Ignore test case when function return some reason
+/// The function should be `fn() -> Option<String>`
+/// ```
+/// test_with::runner!(custom_mod);
+///
+/// fn something_happend() -> Option<String> {
+///     Some("because something happened".to_string())
+/// }
+///
+/// #[test_with::module]
+/// mod custom_mod {
+/// #[test_with::runtime_ignore_if(something_happend)]
+/// fn test_ignored() {
+///     assert!(false);
+///     }
+/// }
+/// ```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_ignore_if(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(feature = "runtime")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let ignore_function = syn::Ident::new(
+        &attr.to_string().replace(' ', ""),
+        proc_macro2::Span::call_site(),
+    );
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+            if let Some(msg) = #ignore_function() {
+                Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+            } else {
+                #ident();
+                Ok(())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
 }

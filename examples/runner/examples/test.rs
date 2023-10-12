@@ -1,4 +1,4 @@
-test_with::runner!(env, file, path, net, user, exe, resource);
+test_with::runner!(env, file, path, net, user, exe, resource, custom_mod);
 
 #[test_with::module]
 mod env {
@@ -146,5 +146,17 @@ mod resource {
     #[test_with::runtime_free_swap(100GB)]
     fn test_ignored_free_swap_not_enough() {
         panic!("should be ignored")
+    }
+}
+
+fn something_happend() -> Option<String> {
+    Some("because something happened".to_string())
+}
+
+#[test_with::module]
+mod custom_mod {
+    #[test_with::runtime_ignore_if(something_happend)]
+    fn test_ignored() {
+        assert!(false);
     }
 }
