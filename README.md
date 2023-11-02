@@ -271,7 +271,7 @@ Require `executable` feature, if default features are disabled.
 ```
 
 ## Runtime
-We can let an example to do thing that cargo test runner do, and ignore testcase in runtime.
+We can let an example to do thing that cargo test runner do, `cargo run --example=<example_name>`, and ignore testcase in runtime.
 The testcase of in the example will not in `#[cfg(test)]` or `#[test]` anymore, and use `#[test_with::runtime_*]`,
 the test runner will treat it as the test in Rust and also provide the same summary as `cargo test`.
 
@@ -283,7 +283,6 @@ libtest-with = { version = "0.6.1-4", features = ["net", "resource", "user", "ex
 
 Create an example with the following runtime macros (`test_with::runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).
 ```rust
-
 test_with::runner!(module_name);
 
 #[test_with::module]
