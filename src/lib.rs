@@ -35,7 +35,7 @@
 //! ```toml
 //! [dependencies]
 //! test-with = { version = "*", default-features = false, features = ["runtime"] }
-//! libtest-with = { version = "0.6.1-3", features = ["net", "resource", "user", "executable"] }
+//! libtest-with = { version = "0.6.1-4", features = ["net", "resource", "user", "executable"] }
 //! ```
 //!
 //! ```rust
@@ -63,7 +63,7 @@ use proc_macro_error::proc_macro_error;
 use syn::{parse_macro_input, ItemFn, ItemMod};
 
 #[cfg(feature = "runtime")]
-use syn::Item;
+use syn::{Item, ItemStruct, ItemType};
 
 #[cfg(feature = "resource")]
 use sysinfo::SystemExt;
@@ -2226,38 +2226,136 @@ pub fn runner(input: TokenStream) -> TokenStream {
     quote::quote! {
         fn main() {
             let args = libtest_with::Arguments::from_args();
-            let mut tests = Vec::new();
+            let mut no_env_tests = Vec::new();
             #(
-                tests.append(&mut #mod_names::_runtime_tests());
+                match #mod_names::_runtime_tests() {
+                    (Some(env), tests) => {
+                        libtest_with::run(&args, tests).exit_if_failed();
+                        drop(env);
+                    },
+                    (None, mut tests) => no_env_tests.append(&mut tests),
+                }
             )*
-            libtest_with::run(&args, tests).exit();
+            libtest_with::run(&args, no_env_tests).exit();
         }
     }
     .into()
 }
 
 /// Help each function with `#[test_with::runtime_*]` in the module can register to run
+/// Also you can set up a mock instance for all of the test in the module
 ///
-///```rust
-/// // example/run-test.rs
+/// ```rust
+///  // example/run-test.rs
 ///
-/// test_with::runner!(module1, module2);
+///  test_with::runner!(module1, module2);
+///  #[test_with::module]
+///  mod module1 {
+///      #[test_with::runtime_env(PWD)]
+///      fn test_works() {
+///          assert!(true);
+///      }
+///  }
+///
+///  #[test_with::module]
+///  mod module2 {
+///      #[test_with::runtime_env(PWD)]
+///      fn test_works() {
+///          assert!(true);
+///      }
+///  }
+/// ```
+/// You can set up mock with a public struct named `TestEnv` inside the module, or a public type
+/// named `TestEnv` inside the module.  And the type or struct should have a Default trait for
+/// initialize the mock instance.
+/// ```rust
+/// use std::ops::Drop;
+/// use std::process::{Child, Command};
+///
+/// test_with::runner!(net);
+///
 /// #[test_with::module]
-/// mod module1 {
-///     #[test_with::runtime_env(PWD)]
-///     fn test_works() {
+/// mod net {
+///     pub struct TestEnv {
+///         p: Child,
+///     }
+///
+///     impl Default for TestEnv {
+///         fn default() -> TestEnv {
+///             let p = Command::new("python")
+///                 .args(["-m", "http.server"])
+///                 .spawn()
+///                 .expect("failed to execute child");
+///             let mut count = 0;
+///             while count < 3 {
+///                 if libtest_with::reqwest::blocking::get("http://127.0.0.1:8000").is_ok() {
+///                     break;
+///                 }
+///                 std::thread::sleep(std::time::Duration::from_secs(1));
+///                 count += 1;
+///             }
+///             TestEnv { p }
+///         }
+///     }
+///
+///     impl Drop for TestEnv {
+///         fn drop(&mut self) {
+///             self.p.kill().expect("fail to kill python http.server");
+///         }
+///     }
+///
+///     #[test_with::runtime_http(127.0.0.1:8000)]
+///     fn test_with_environment() {
 ///         assert!(true);
 ///     }
 /// }
 ///
+/// ```
+/// or you can write mock struct in other place and just pass by type.
+/// ```rust
+/// use std::ops::Drop;
+/// use std::process::{Child, Command};
+///
+/// test_with::runner!(net);
+///
+/// pub struct Moc {
+///     p: Child,
+/// }
+///
+/// impl Default for Moc {
+///     fn default() -> Moc {
+///         let p = Command::new("python")
+///             .args(["-m", "http.server"])
+///             .spawn()
+///             .expect("failed to execute child");
+///         let mut count = 0;
+///         while count < 3 {
+///             if libtest_with::reqwest::blocking::get("http://127.0.0.1:8000").is_ok() {
+///                 break;
+///             }
+///             std::thread::sleep(std::time::Duration::from_secs(1));
+///             count += 1;
+///         }
+///         Moc { p }
+///     }
+/// }
+///
+/// impl Drop for Moc {
+///     fn drop(&mut self) {
+///         self.p.kill().expect("fail to kill python http.server");
+///     }
+/// }
+///
 /// #[test_with::module]
-/// mod module2 {
-///     #[test_with::runtime_env(PWD)]
-///     fn test_works() {
+/// mod net {
+///     pub type TestEnv = super::Moc;
+///
+///     #[test_with::runtime_http(127.0.0.1:8000)]
+///     fn test_with_environment() {
 ///         assert!(true);
 ///     }
 /// }
-///```
+/// ```
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
 #[proc_macro_error]
@@ -2282,6 +2380,7 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
         if crate::utils::has_test_cfg(&attrs) {
             abort_call_site!("should not use `#[cfg(test)]` on the mod with `#[test_with::module]`")
         } else {
+            let mut test_env_type = None;
             let test_names: Vec<String> = content
                 .iter()
                 .filter_map(|c| match c {
@@ -2299,6 +2398,16 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                         (false, true, true) => Some(ident.to_string()),
                         _ => None,
                     },
+                    Item::Struct(ItemStruct { ident, vis, .. })
+                    | Item::Type(ItemType { ident, vis, .. }) => {
+                        if ident.to_string() == "TestEnv" {
+                            match vis {
+                                syn::Visibility::Public(_) => test_env_type = Some(ident),
+                                _ => abort_call_site!("TestEnv should be pub for testing"),
+                            }
+                        }
+                        None
+                    }
                     _ => None,
                 })
                 .collect();
@@ -2311,20 +2420,43 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     )
                 })
                 .collect();
-            quote::quote! {
-                #(#attrs)*
-                #vis #mod_token #ident {
-                    use super::*;
-                    pub fn _runtime_tests() -> Vec<libtest_with::Trial> {
-                        use libtest_with::Trial;
-                        vec![
-                            #(Trial::test(#test_names, #check_names),)*
-                        ]
+            if let Some(test_env_type) = test_env_type {
+                quote::quote! {
+                    #(#attrs)*
+                    #vis #mod_token #ident {
+                        use super::*;
+                        pub fn _runtime_tests() -> (Option<#test_env_type>, Vec<libtest_with::Trial>) {
+                            use libtest_with::Trial;
+                            (
+                                Some(#test_env_type::default()),
+                                vec![
+                                    #(Trial::test(#test_names, #check_names),)*
+                                ]
+                            )
+                        }
+                        #(#content)*
                     }
-                    #(#content)*
                 }
+                .into()
+            } else {
+                quote::quote! {
+                    #(#attrs)*
+                    #vis #mod_token #ident {
+                        use super::*;
+                        pub fn _runtime_tests() -> (Option<()>, Vec<libtest_with::Trial>) {
+                            use libtest_with::Trial;
+                            (
+                                None,
+                                vec![
+                                    #(Trial::test(#test_names, #check_names),)*
+                                ]
+                            )
+                        }
+                        #(#content)*
+                    }
+                }
+                .into()
             }
-            .into()
         }
     } else {
         abort_call_site!("should use on mod with context")
