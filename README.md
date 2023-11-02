@@ -4,6 +4,7 @@
 [![Docs][doc-badge]][doc-url]
 
 A lib help you run test with conditions, else the test will be ignored with clear message.
+Also, you can easiler run test with customed test environment or mock service.
 
 ## Introduction
 It is good to use this crate in dev dependency as following
@@ -25,6 +26,7 @@ because of this [issue][original-issue] of rust-lang.
 Here are [slides@COSCUP][coscup-slides] and [slides@COSCON][coscon-slides] to help you know more about it.
 If you really want to check the condition in runtime, please check [runtime section](https://github.com/yanganto/test-with#runtime).
 The `runtime` feature and runtime macros (`test_with::runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`) can help you run the test and check the conditions in runtime.
+Also, the customed test environment or mock service can set with the modules with `runtime` feature.
 
 If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will add it for you.
 
@@ -276,7 +278,7 @@ the test runner will treat it as the test in Rust and also provide the same summ
 The `runtime` feature should be enabled and include as normal dependency, and also include the `libtest-with` with corresponding features in `Cargo.toml`.
 ```toml
 test-with = { version = "0.10", features = ["runtime"] }
-libtest-with = { version = "0.6.1-3", features = ["net", "resource", "user", "executable"] }
+libtest-with = { version = "0.6.1-4", features = ["net", "resource", "user", "executable"] }
 ```
 
 Create an example with the following runtime macros (`test_with::runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).
@@ -307,10 +309,56 @@ mod custom_mod {
         assert!(false);
     }
 }
-
 ```
 
-Please check out the [example/runner](https://github.com/yanganto/test-with/tree/main/examples/runner).
+There are two ways to setup mock service in the test runner, one is by `struct` and the other is by `type`.
+```rust
+test_with::runner!(test_with_mock);
+
+#[test_with::module]
+mod test_with_mock {
+    pub struct TestEnv {}
+
+    impl Default for TestEnv {
+        fn default() -> TestEnv {
+            // Set up mock here
+            TestEnv {}
+        }
+    }
+
+    impl Drop for TestEnv {
+        fn drop(&mut self) {
+            // Tear down mock here
+        }
+    }
+}
+```
+or
+```rust
+test_with::runner!(test_with_mock);
+
+pub struct Moc {}
+
+impl Default for Moc {
+    fn default() -> Moc {
+        // Set up mock here
+        Moc {}
+    }
+}
+
+impl Drop for Moc {
+    fn drop(&mut self) {
+        // Tear down mock here
+    }
+}
+
+#[test_with::module]
+mod test_with_mock {
+    pub type TestEnv = super::Moc;
+}
+```
+
+Please check out examples uder the [example/runner](https://github.com/yanganto/test-with/tree/main/examples/runner) project.
 
 
 ## Relating issues
