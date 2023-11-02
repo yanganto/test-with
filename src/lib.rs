@@ -2267,7 +2267,7 @@ pub fn runner(input: TokenStream) -> TokenStream {
 /// ```
 /// You can set up mock with a public struct named `TestEnv` inside the module, or a public type
 /// named `TestEnv` inside the module.  And the type or struct should have a Default trait for
-/// initailize the mock instance.
+/// initialize the mock instance.
 /// ```rust
 /// use std::ops::Drop;
 /// use std::process::{Child, Command};

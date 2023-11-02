@@ -44,6 +44,8 @@
           # runtime ignore example
           cd examples/runner
           cargo run --example test
+          cargo run --example mock
+          cargo run --example mock2
         '';
       in
       with pkgs;
