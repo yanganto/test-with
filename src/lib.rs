@@ -35,7 +35,7 @@
 //! ```toml
 //! [dependencies]
 //! test-with = { version = "*", default-features = false, features = ["runtime"] }
-//! libtest-with = { version = "0.6.1-4", features = ["net", "resource", "user", "executable"] }
+//! libtest-with = { version = "0.6.1-5", features = ["net", "resource", "user", "executable"] }
 //! ```
 //!
 //! ```rust
@@ -1453,11 +1453,11 @@ pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_mem_condition(mem_size_str: String) -> (bool, String) {
     let mut sys = sysinfo::System::new_all();
     sys.refresh_all();
-    let mem_size = match byte_unit::Byte::from_str(format!("{} B", sys.total_memory())) {
+    let mem_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
         Ok(b) => b,
         Err(_) => abort_call_site!("memory size description is not correct"),
     };
-    let mem_size_limitation = match byte_unit::Byte::from_str(&mem_size_str) {
+    let mem_size_limitation = match byte_unit::Byte::parse_str(&mem_size_str, true) {
         Ok(b) => b,
         Err(_) => abort_call_site!("system memory size can not get"),
     };
@@ -1490,7 +1490,7 @@ pub fn runtime_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let mem_limitation_str = attr.to_string().replace(' ', "");
-    if byte_unit::Byte::from_str(&mem_limitation_str).is_err() {
+    if byte_unit::Byte::parse_str(&mem_limitation_str, true).is_err() {
         abort_call_site!("memory size description is not correct")
     }
 
@@ -1511,11 +1511,11 @@ pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
             use libtest_with::sysinfo::SystemExt;
             let mut sys = libtest_with::sysinfo::System::new_all();
             sys.refresh_all();
-            let mem_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.total_memory())) {
+            let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system memory size can not get"),
             };
-            let mem_size_limitation = libtest_with::byte_unit::Byte::from_str(#mem_limitation_str).expect("mem limitation should correct");
+            let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
             if  mem_size >= mem_size_limitation {
                 #ident();
                 Ok(())
@@ -1555,7 +1555,7 @@ pub fn runtime_free_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream
 #[proc_macro_error]
 pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let mem_limitation_str = attr.to_string().replace(' ', "");
-    if byte_unit::Byte::from_str(&mem_limitation_str).is_err() {
+    if byte_unit::Byte::parse_str(&mem_limitation_str, true).is_err() {
         abort_call_site!("memory size description is not correct")
     }
 
@@ -1576,11 +1576,11 @@ pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
             use libtest_with::sysinfo::SystemExt;
             let mut sys = libtest_with::sysinfo::System::new_all();
             sys.refresh_all();
-            let mem_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.free_memory())) {
+            let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system memory size can not get"),
             };
-            let mem_size_limitation = libtest_with::byte_unit::Byte::from_str(#mem_limitation_str).expect("mem limitation should correct");
+            let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
             if  mem_size >= mem_size_limitation {
                 #ident();
                 Ok(())
@@ -1620,7 +1620,7 @@ pub fn runtime_available_mem(_attr: TokenStream, _stream: TokenStream) -> TokenS
 #[proc_macro_error]
 pub fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let mem_limitation_str = attr.to_string().replace(' ', "");
-    if byte_unit::Byte::from_str(&mem_limitation_str).is_err() {
+    if byte_unit::Byte::parse_str(&mem_limitation_str, true).is_err() {
         abort_call_site!("memory size description is not correct")
     }
 
@@ -1641,11 +1641,11 @@ pub fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStr
             use libtest_with::sysinfo::SystemExt;
             let mut sys = libtest_with::sysinfo::System::new_all();
             sys.refresh_all();
-            let mem_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.available_memory())) {
+            let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system memory size can not get"),
             };
-            let mem_size_limitation = libtest_with::byte_unit::Byte::from_str(#mem_limitation_str).expect("mem limitation should correct");
+            let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
             if  mem_size >= mem_size_limitation {
                 #ident();
                 Ok(())
@@ -1699,11 +1699,11 @@ pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 fn check_swap_condition(swap_size_str: String) -> (bool, String) {
     let mut sys = sysinfo::System::new_all();
     sys.refresh_all();
-    let swap_size = match byte_unit::Byte::from_str(format!("{} B", sys.total_swap())) {
+    let swap_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
         Ok(b) => b,
         Err(_) => abort_call_site!("Swap size description is not correct"),
     };
-    let swap_size_limitation = match byte_unit::Byte::from_str(&swap_size_str) {
+    let swap_size_limitation = match byte_unit::Byte::parse_str(&swap_size_str, true) {
         Ok(b) => b,
         Err(_) => abort_call_site!("Can not get system swap size"),
     };
@@ -1736,7 +1736,7 @@ pub fn runtime_swap(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let swap_limitation_str = attr.to_string().replace(' ', "");
-    if byte_unit::Byte::from_str(&swap_limitation_str).is_err() {
+    if byte_unit::Byte::parse_str(&swap_limitation_str, true).is_err() {
         abort_call_site!("swap size description is not correct")
     }
 
@@ -1757,11 +1757,11 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
             use libtest_with::sysinfo::SystemExt;
             let mut sys = libtest_with::sysinfo::System::new_all();
             sys.refresh_all();
-            let swap_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.total_swap())) {
+            let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system swap size can not get"),
             };
-            let swap_size_limitation = libtest_with::byte_unit::Byte::from_str(#swap_limitation_str).expect("swap limitation should correct");
+            let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
             if  swap_size >= swap_size_limitation {
                 #ident();
                 Ok(())
@@ -1801,7 +1801,7 @@ pub fn runtime_free_swap(_attr: TokenStream, _stream: TokenStream) -> TokenStrea
 #[proc_macro_error]
 pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let swap_limitation_str = attr.to_string().replace(' ', "");
-    if byte_unit::Byte::from_str(&swap_limitation_str).is_err() {
+    if byte_unit::Byte::parse_str(&swap_limitation_str, true).is_err() {
         abort_call_site!("swap size description is not correct")
     }
 
@@ -1822,11 +1822,11 @@ pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream 
             use libtest_with::sysinfo::SystemExt;
             let mut sys = libtest_with::sysinfo::System::new_all();
             sys.refresh_all();
-            let swap_size = match libtest_with::byte_unit::Byte::from_str(format!("{} B", sys.free_swap())) {
+            let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system swap size can not get"),
             };
-            let swap_size_limitation = libtest_with::byte_unit::Byte::from_str(#swap_limitation_str).expect("swap limitation should correct");
+            let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
             if  swap_size >= swap_size_limitation {
                 #ident();
                 Ok(())
