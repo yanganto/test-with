@@ -65,8 +65,6 @@ use syn::{parse_macro_input, ItemFn, ItemMod};
 #[cfg(feature = "runtime")]
 use syn::{Item, ItemStruct, ItemType};
 
-#[cfg(feature = "resource")]
-use sysinfo::SystemExt;
 #[cfg(feature = "executable")]
 use which::which;
 
@@ -1451,8 +1449,9 @@ pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 #[cfg(feature = "resource")]
 fn check_mem_condition(mem_size_str: String) -> (bool, String) {
-    let mut sys = sysinfo::System::new_all();
-    sys.refresh_all();
+    let sys = sysinfo::System::new_with_specifics(
+        sysinfo::RefreshKind::new().with_memory(sysinfo::MemoryRefreshKind::new().with_swap()),
+    );
     let mem_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
         Ok(b) => b,
         Err(_) => abort_call_site!("memory size description is not correct"),
@@ -1508,9 +1507,9 @@ pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
-            use libtest_with::sysinfo::SystemExt;
-            let mut sys = libtest_with::sysinfo::System::new_all();
-            sys.refresh_all();
+            let sys = libtest_with::sysinfo::System::new_with_specifics(
+                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_ram()),
+            );
             let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system memory size can not get"),
@@ -1573,9 +1572,9 @@ pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
-            use libtest_with::sysinfo::SystemExt;
-            let mut sys = libtest_with::sysinfo::System::new_all();
-            sys.refresh_all();
+            let sys = libtest_with::sysinfo::System::new_with_specifics(
+                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_ram()),
+            );
             let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system memory size can not get"),
@@ -1638,9 +1637,9 @@ pub fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStr
 
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
-            use libtest_with::sysinfo::SystemExt;
-            let mut sys = libtest_with::sysinfo::System::new_all();
-            sys.refresh_all();
+            let sys = libtest_with::sysinfo::System::new_with_specifics(
+                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_ram()),
+            );
             let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system memory size can not get"),
@@ -1697,8 +1696,9 @@ pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 #[cfg(feature = "resource")]
 fn check_swap_condition(swap_size_str: String) -> (bool, String) {
-    let mut sys = sysinfo::System::new_all();
-    sys.refresh_all();
+    let sys = sysinfo::System::new_with_specifics(
+        sysinfo::RefreshKind::new().with_memory(sysinfo::MemoryRefreshKind::new().with_swap()),
+    );
     let swap_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
         Ok(b) => b,
         Err(_) => abort_call_site!("Swap size description is not correct"),
@@ -1754,9 +1754,9 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
-            use libtest_with::sysinfo::SystemExt;
-            let mut sys = libtest_with::sysinfo::System::new_all();
-            sys.refresh_all();
+            let sys = libtest_with::sysinfo::System::new_with_specifics(
+                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_swap()),
+            );
             let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system swap size can not get"),
@@ -1819,9 +1819,9 @@ pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream 
 
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
-            use libtest_with::sysinfo::SystemExt;
-            let mut sys = libtest_with::sysinfo::System::new_all();
-            sys.refresh_all();
+            let sys = libtest_with::sysinfo::System::new_with_specifics(
+                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_swap()),
+            );
             let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
                 Ok(b) => b,
                 Err(_) => panic!("system swap size can not get"),
