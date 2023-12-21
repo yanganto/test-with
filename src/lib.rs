@@ -35,7 +35,7 @@
 //! ```toml
 //! [dependencies]
 //! test-with = { version = "*", default-features = false, features = ["runtime"] }
-//! libtest-with = { version = "0.6.1-5", features = ["net", "resource", "user", "executable"] }
+//! libtest-with = { version = "0.6.1-6", features = ["net", "resource", "user", "executable"] }
 //! ```
 //!
 //! ```rust
