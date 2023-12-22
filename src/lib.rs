@@ -39,7 +39,7 @@
 //! ```
 //!
 //! ```rust
-//! // write as example in exmaples/*rs
+//! // write as example in examples/*rs
 //! test_with::runner!(env);
 //! #[test_with::module]
 //! mod env {
@@ -150,7 +150,7 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
 
 /// Run test case when the example running and the environment variable is set.
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(env);
 /// #[test_with::module]
 /// mod env {
@@ -258,7 +258,7 @@ fn check_no_env_condition(attr_str: String) -> (bool, String) {
 
 /// Ignore test case when the example running and the environment variable is set.
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(env);
 /// #[test_with::module]
 /// mod env {
@@ -387,7 +387,7 @@ fn check_file_condition(attr_str: String) -> (bool, String) {
 
 /// Run test case when the example running and the file exist.
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(file);
 /// #[test_with::module]
 /// mod file {
@@ -517,7 +517,7 @@ fn check_path_condition(attr_str: String) -> (bool, String) {
 
 /// Run test case when the example running and the path(file or folder) exist.
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(path);
 /// #[test_with::module]
 /// mod path {
@@ -643,7 +643,7 @@ fn check_http_condition(attr_str: String) -> (bool, String) {
 
 /// Run test case when the example running and the http service exist.
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(http);
 /// #[test_with::module]
 /// mod http {
@@ -770,7 +770,7 @@ fn check_https_condition(attr_str: String) -> (bool, String) {
 
 /// Run test case when the example running and the http service exist.
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(http);
 /// #[test_with::module]
 /// mod http {
@@ -903,7 +903,7 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
 /// Run test case when the example running and the server online.
 /// Please make sure the role of test case runner have capability to open socket
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(icmp);
 /// #[test_with::module]
 /// mod icmp {
@@ -1029,7 +1029,7 @@ fn check_tcp_condition(attr_str: String) -> (bool, String) {
 
 /// Run test case when the example running and socket connected
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(tcp);
 /// #[test_with::module]
 /// mod tcp {
@@ -1138,7 +1138,7 @@ fn check_root_condition(_attr_str: String) -> (bool, String) {
 
 /// Run test case when runner is root
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(user);
 /// #[test_with::module]
 /// mod user {
@@ -1244,7 +1244,7 @@ fn check_group_condition(group_name: String) -> (bool, String) {
 
 /// Run test case when runner in group
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(user);
 /// #[test_with::module]
 /// mod user {
@@ -1358,7 +1358,7 @@ fn check_user_condition(user_name: String) -> (bool, String) {
 
 /// Run test case when runner is specific user
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(user);
 /// #[test_with::module]
 /// mod user {
@@ -1468,7 +1468,7 @@ fn check_mem_condition(mem_size_str: String) -> (bool, String) {
 
 /// Run test case when the example running and memory size enough
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(resource);
 /// #[test_with::module]
 /// mod resource {
@@ -1533,7 +1533,7 @@ pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 /// Run test case when the example running and free memory size enough
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(resource);
 /// #[test_with::module]
 /// mod resource {
@@ -1598,7 +1598,7 @@ pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 /// Run test case when the example running and available memory size enough
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(resource);
 /// #[test_with::module]
 /// mod resource {
@@ -1715,7 +1715,7 @@ fn check_swap_condition(swap_size_str: String) -> (bool, String) {
 
 /// Run test case when the example running and swap enough
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(resource);
 /// #[test_with::module]
 /// mod resource {
@@ -1780,7 +1780,7 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 /// Run test case when the example running and free swap enough
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(resource);
 /// #[test_with::module]
 /// mod resource {
@@ -1889,7 +1889,7 @@ fn check_cpu_core_condition(core_limitation_str: String) -> (bool, String) {
 
 /// Run test case when cpu core enough
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(resource);
 /// #[test_with::module]
 /// mod resource {
@@ -1994,7 +1994,7 @@ fn check_phy_core_condition(core_limitation_str: String) -> (bool, String) {
 
 /// Run test case when physical core enough
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(resource);
 /// #[test_with::module]
 /// mod resource {
@@ -2124,7 +2124,7 @@ fn check_executable_condition(attr_str: String) -> (bool, String) {
 
 /// Run test case when the executable existing
 ///```rust
-/// // write as example in exmaples/*rs
+/// // write as example in examples/*rs
 /// test_with::runner!(exe);
 /// #[test_with::module]
 /// mod exe {
