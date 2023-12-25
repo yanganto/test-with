@@ -45,3 +45,4 @@ executable = ["which"]
 [dev-dependencies]
 tokio = { version = "1.15.0", features = ["rt", "macros"] }
 serial_test = "2.0.0"
+libtest-with = { version = "0.6.1-6", features = ["net", "resource", "user", "executable"] }
