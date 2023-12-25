@@ -19,3 +19,6 @@ jobs:
 
       - name: Example test in features
         run: nix develop -c feature-test
+
+      - name: Cargo test
+        run: nix develop -c cargo test --all-features
