@@ -257,3 +257,58 @@ pub(crate) fn mod_macro(
         abort_call_site!("should use on mod with context")
     }
 }
+
+/// Sanitize the attribute string to remove any leading or trailing whitespace
+/// and split the string into an iterator of individual environment variable names.
+pub fn sanitize_env_vars_attr(attr_str: &str) -> impl Iterator<Item=&str> {
+    attr_str.split(',').map(str::trim)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_env_vars_attr;
+
+    #[test]
+    fn sanitize_single_env_var() {
+        //* Given
+        let env_var = "FOO";
+
+        let attr_str = env_var.to_string();
+
+        //* When
+        let result = sanitize_env_vars_attr(&attr_str).collect::<Vec<_>>();
+
+        //* Then
+        assert_eq!(result, vec!["FOO"]);
+    }
+
+    #[test]
+    fn sanitize_multiple_env_vars() {
+        //* Given
+        let env_var1 = "FOO";
+        let env_var2 = "BAR";
+        let env_var3 = "BAZ";
+
+        let attr_str = format!("\t{},\n\t{},\n\t{}", env_var1, env_var2, env_var3);
+
+        //* When
+        let result = sanitize_env_vars_attr(&attr_str).collect::<Vec<_>>();
+
+        //* Then
+        assert_eq!(result, vec!["FOO", "BAR", "BAZ"]);
+    }
+
+    #[test]
+    fn sanitize_env_vars_with_whitespace() {
+        //* Given
+        let env_var = "FOO BAR";
+
+        let attr_str = env_var.to_string();
+
+        //* When
+        let result = sanitize_env_vars_attr(&attr_str).collect::<Vec<_>>();
+
+        //* Then
+        assert_eq!(result, vec!["FOO BAR"]);
+    }
+}
