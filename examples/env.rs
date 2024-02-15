@@ -30,6 +30,15 @@ mod tests {
     fn test_ignore_in_github_action() {
         println!("should be ignored in GITHUB_ACTION");
     }
+
+    #[test_with::env(
+        IT_SOME_LONG_ENV_VAR_NAME_TEST_URL,
+        IT_SOME_LONG_ENV_VAR_NAME_TEST_AUTH_TOKEN
+    )]
+    #[test]
+    fn test_ignored_with_long_env() {
+        panic!("should be ignored")
+    }
 }
 
 #[test_with::env(PWD)]
