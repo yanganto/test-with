@@ -68,7 +68,7 @@ use syn::{Item, ItemStruct, ItemType};
 #[cfg(feature = "executable")]
 use which::which;
 
-use crate::utils::{fn_macro, is_module, mod_macro};
+use crate::utils::{fn_macro, is_module, mod_macro, sanitize_env_vars_attr};
 
 mod utils;
 
@@ -130,14 +130,20 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 }
 
 fn check_env_condition(attr_str: String) -> (bool, String) {
-    let var_names: Vec<&str> = attr_str.split(',').collect();
+    let var_names = sanitize_env_vars_attr(&attr_str);
+
+    // Check if the environment variables are set
     let mut missing_vars = vec![];
-    for var in var_names.iter() {
-        if std::env::var(var).is_err() {
-            missing_vars.push(var.to_string());
+    for name in var_names {
+        if std::env::var(name).is_err() {
+            missing_vars.push(name.to_string());
         }
     }
-    let ignore_msg = if missing_vars.len() == 1 {
+
+    // Generate ignore message
+    let ignore_msg = if missing_vars.is_empty() {
+        String::new()
+    } else if missing_vars.len() == 1 {
         format!("because variable {} not found", missing_vars[0])
     } else {
         format!(
@@ -145,6 +151,7 @@ fn check_env_condition(attr_str: String) -> (bool, String) {
             missing_vars.join(", ")
         )
     };
+
     (missing_vars.is_empty(), ignore_msg)
 }
 
@@ -244,16 +251,29 @@ pub fn no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 }
 
 fn check_no_env_condition(attr_str: String) -> (bool, String) {
-    let var_names: Vec<&str> = attr_str.split(',').collect();
-    for var in var_names.iter() {
-        if std::env::var(var).is_ok() {
-            return (
-                false,
-                format!("because the environment with variable {var:} will ignore"),
-            );
+    let var_names = sanitize_env_vars_attr(&attr_str);
+
+    // Check if the environment variables are set
+    let mut found_vars = vec![];
+    for name in var_names {
+        if std::env::var(name).is_ok() {
+            found_vars.push(name.to_string());
         }
     }
-    (true, String::new())
+
+    // Generate ignore message
+    let ignore_msg = if found_vars.is_empty() {
+        String::new()
+    } else if found_vars.len() == 1 {
+        format!("because variable {} was found", found_vars[0])
+    } else {
+        format!(
+            "because following variables were found:\n{}\n",
+            found_vars.join(", ")
+        )
+    };
+
+    (found_vars.is_empty(), ignore_msg)
 }
 
 /// Ignore test case when the example running and the environment variable is set.
@@ -2519,4 +2539,285 @@ pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream 
         #vis #sig #block
     }
     .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{check_env_condition, check_no_env_condition};
+
+    mod env_macro {
+        use super::*;
+
+        #[test]
+        fn single_env_var_should_be_not_set() {
+            //* Given
+            let env_var = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = env_var.to_string();
+
+            //* When
+            let (is_ok, ignore_msg) = check_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(!is_ok);
+            // Assert the ignore message should contain only the missing env var names
+            assert!(ignore_msg.contains(env_var));
+        }
+
+        #[test]
+        fn multiple_env_vars_should_not_be_set() {
+            //* Given
+            let env_var1 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+            let env_var2 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = format!("{}, {}", env_var1, env_var2);
+
+            //* When
+            let (is_ok, ignore_msg) = check_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(!is_ok);
+            // Assert the ignore message should contain only the missing env var names
+            assert!(ignore_msg.contains(env_var1));
+            assert!(ignore_msg.contains(env_var2));
+        }
+
+        #[test]
+        fn single_env_var_should_be_set() {
+            //* Given
+            let env_var = "PATH";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = env_var.to_string();
+
+            //* When
+            let (is_ok, ignore_msg) = check_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(is_ok);
+            // Assert the ignore message should contain only the missing env var names
+            assert!(!ignore_msg.contains(env_var));
+        }
+
+        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
+        /// when the attribute string contains multiple env vars containing spaces and newlines.
+        ///
+        /// ```no_run
+        /// #[test_with::env(
+        ///   PATH,
+        ///   HOME
+        /// )]
+        /// #[test]
+        /// fn some_test() {}
+        #[test]
+        fn multiple_env_vars_should_be_set() {
+            //* Given
+            let env_var1 = "PATH";
+            let env_var2 = "HOME";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = format!("\t{},\n\t{}\n", env_var1, env_var2);
+
+            //* When
+            let (is_ok, ignore_msg) = check_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(is_ok);
+            // Assert the ignore message should contain only the missing env var names
+            assert!(!ignore_msg.contains(env_var1));
+            assert!(!ignore_msg.contains(env_var2));
+        }
+
+        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
+        /// when the attribute string contains multiple env vars and one of them is not set.
+        #[test]
+        fn multiple_env_vars_but_one_is_not_set() {
+            //* Given
+            let env_var1 = "PATH";
+            let env_var2 = "HOME";
+            let env_var3 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
+
+            //* When
+            let (is_ok, ignore_msg) = check_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(!is_ok);
+            // Assert the ignore message should contain only the missing env var names
+            assert!(!ignore_msg.contains(env_var1));
+            assert!(!ignore_msg.contains(env_var2));
+            assert!(ignore_msg.contains(env_var3));
+        }
+
+        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
+        /// when the attribute string contains multiple env vars and various of them are not set.
+        #[test]
+        fn multiple_env_vars_and_various_not_set() {
+            //* Given
+            let env_var1 = "PATH";
+            let env_var2 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+            let env_var3 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
+
+            //* When
+            let (is_ok, ignore_msg) = check_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(!is_ok);
+            // Assert the ignore message should contain only the missing env var names
+            assert!(!ignore_msg.contains(env_var1));
+            assert!(ignore_msg.contains(env_var2));
+            assert!(ignore_msg.contains(env_var3));
+        }
+    }
+
+    mod no_env_macro {
+        use super::*;
+
+        #[test]
+        fn single_env_var_not_set() {
+            //* Given
+            let env_var = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = env_var.to_string();
+
+            //* When
+            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(is_ok);
+            // Assert the ignore message should contain only the found env var names
+            assert!(!ignore_msg.contains(env_var));
+        }
+
+        #[test]
+        fn multiple_env_vars_not_set() {
+            //* Given
+            let env_var1 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+            let env_var2 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = format!("{}, {}", env_var1, env_var2);
+
+            //* When
+            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(is_ok);
+            // Assert the ignore message should contain only the found env var names
+            assert!(!ignore_msg.contains(env_var1));
+            assert!(!ignore_msg.contains(env_var2));
+        }
+
+        #[test]
+        fn single_env_var_set() {
+            //* Given
+            let env_var = "PATH";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = env_var.to_string();
+
+            //* When
+            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(!is_ok);
+            // Assert the ignore message should contain only the found env var names
+            assert!(ignore_msg.contains(env_var));
+        }
+
+        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
+        /// when the attribute string contains multiple env vars containing spaces and newlines.
+        ///
+        /// ```no_run
+        /// #[test_with::no_env(
+        ///   PATH,
+        ///   HOME
+        /// )]
+        /// #[test]
+        /// fn some_test() {}
+        #[test]
+        fn multiple_env_vars_set() {
+            //* Given
+            let env_var1 = "PATH";
+            let env_var2 = "HOME";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = format!("\t{},\n\t{}\n", env_var1, env_var2);
+
+            //* When
+            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(!is_ok);
+            // Assert the ignore message should contain only the found env var names
+            assert!(ignore_msg.contains(env_var1));
+            assert!(ignore_msg.contains(env_var2));
+        }
+
+        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
+        /// when the attribute string contains multiple env vars and one of them is set.
+        #[test]
+        fn multiple_env_vars_but_one_is_set() {
+            //* Given
+            let env_var1 = "PATH";
+            let env_var2 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+            let env_var3 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
+
+            //* When
+            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(!is_ok);
+            // Assert the ignore message should contain only the found env var names
+            assert!(ignore_msg.contains(env_var1));
+            assert!(!ignore_msg.contains(env_var2));
+            assert!(!ignore_msg.contains(env_var3));
+        }
+
+        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
+        /// when the attribute string contains multiple env vars and various of them are set.
+        #[test]
+        fn multiple_env_vars_and_various_are_set() {
+            //* Given
+            let env_var1 = "PATH";
+            let env_var2 = "HOME";
+            let env_var3 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
+
+            // The `test_with::env(<attr_str>)` macro arguments
+            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
+
+            //* When
+            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
+
+            //* Then
+            // Assert if the test should be ignored
+            assert!(!is_ok);
+            // Assert the ignore message should contain only the found env var names
+            assert!(ignore_msg.contains(env_var1));
+            assert!(ignore_msg.contains(env_var2));
+            assert!(!ignore_msg.contains(env_var3));
+        }
+    }
 }
