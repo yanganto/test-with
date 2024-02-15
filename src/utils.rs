@@ -260,7 +260,7 @@ pub(crate) fn mod_macro(
 
 /// Sanitize the attribute string to remove any leading or trailing whitespace
 /// and split the string into an iterator of individual environment variable names.
-pub fn sanitize_env_vars_attr(attr_str: &str) -> impl Iterator<Item=&str> {
+pub fn sanitize_env_vars_attr(attr_str: &str) -> impl Iterator<Item = &str> {
     attr_str.split(',').map(str::trim)
 }
 
