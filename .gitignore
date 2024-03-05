@@ -2,7 +2,9 @@
 **/*.rs.bk
 .envrc
 .direnv/
-# The library shouldn't decide about the exact versions of 
-# its dependencies, but let the downstream crate decide.
-Cargo.lock
+# In Aug 2023 the Rust project changed the guidance on werever Cargo.lock
+# files should be included or not. To guarantee the CI builds are consistent
+# we are including the Cargo.lock files in the repository.
+# See: https://www.infoworld.com/article/3705930/rust-changes-cargo-package-guidance.html
+# Cargo.lock
 examples/runner/target
