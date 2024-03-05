@@ -1149,7 +1149,7 @@ pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 #[cfg(all(feature = "user", not(target_os = "windows")))]
 fn check_root_condition(_attr_str: String) -> (bool, String) {
-    let current_user_id = users::get_current_uid();
+    let current_user_id = uzers::get_current_uid();
     (
         current_user_id == 0,
         "because this case should run with root".into(),
@@ -1241,9 +1241,9 @@ pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(feature = "user")]
 #[cfg(all(feature = "user", not(target_os = "windows")))]
 fn check_group_condition(group_name: String) -> (bool, String) {
-    let current_user_id = users::get_current_uid();
+    let current_user_id = uzers::get_current_uid();
 
-    let in_group = match users::get_user_by_uid(current_user_id) {
+    let in_group = match uzers::get_user_by_uid(current_user_id) {
         Some(user) => {
             let mut in_group = false;
             for group in user.groups().expect("user not found") {
@@ -1366,7 +1366,7 @@ pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(feature = "user")]
 #[cfg(all(feature = "user", not(target_os = "windows")))]
 fn check_user_condition(user_name: String) -> (bool, String) {
-    let is_user = match users::get_current_username() {
+    let is_user = match uzers::get_current_username() {
         Some(uname) => uname.to_string_lossy() == user_name,
         None => false,
     };
