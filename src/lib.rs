@@ -1066,7 +1066,7 @@ pub fn runtime_tcp(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 
-#[cfg(all(feature = "runtime"))]
+#[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
