@@ -46,3 +46,4 @@ executable = ["which"]
 tokio = { version = "1.15.0", features = ["rt", "macros"] }
 serial_test = "2.0.0"
 libtest-with = { version = "0.7.0-0", features = ["net", "resource", "user", "executable"] }
+rstest = "0.21.0"
