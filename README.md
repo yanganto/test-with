@@ -34,7 +34,7 @@ Rust version `1.61` of stable channel or `2022-03-30` of nightly channel will sh
 If the ignore message does not show in the previous Rust version you used, the feature `ign-msg` can be used to work around.
 and the name of ignored test case will be rewritten, such that you can easier to know why the test is ignored.
 
-The order of test macros(`#[test]`, `#[tokio::test]`, `#[serial_test::serial]`, ...) is important, please check out examples.
+The order of test macros(`#[test]`, `#[tokio::test]`, `#[serial_test::serial]`, `#[rstest]`...) is important, please check out examples.
 
 ## Environment Variable
 Run test case when the environment variable is set.
