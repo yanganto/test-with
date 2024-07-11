@@ -7,7 +7,7 @@ license = "MIT"
 description = "A lib help you run test with condition"
 repository = "https://github.com/yanganto/test-with"
 keywords = [ "testing", "condition", "toggle", "integration", "ignore" ]
-categories = [ "development-tools", "testing" ]
+categories = [ "development-tools" ]
 rust-version = "1.77.0" # Due to std::fs::create_new
 
 [lib]
