@@ -44,7 +44,7 @@ user = ["uzers"]
 executable = ["which"]
 
 [dev-dependencies]
-tokio = { version = "1.15.0", features = ["rt", "macros"] }
-serial_test = "2.0.0"
+tokio = { version = "1.38.0", features = ["rt", "rt-multi-thread", "macros"] }
+serial_test = "3.1.1"
 libtest-with = { version = "0.7.0-0", features = ["net", "resource", "user", "executable"] }
 rstest = "0.21.0"
