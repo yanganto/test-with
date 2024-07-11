@@ -9,7 +9,7 @@ use quote::quote;
 #[cfg(feature = "ign-msg")]
 use syn::Signature;
 use syn::{Attribute, Meta};
-use syn::{Ident, Item, ItemFn, ItemMod};
+use syn::{Block, Ident, Item, ItemFn, ItemMod};
 
 // check for `#[test]`, `#[tokio::test]`, `#[async_std::test]`
 pub(crate) fn has_test_attr(attrs: &[Attribute]) -> bool {
@@ -255,6 +255,81 @@ pub(crate) fn mod_macro(
         }
     } else {
         abort_call_site!("should use on mod with context")
+    }
+}
+
+pub(crate) fn lock_macro(attr: TokenStream, input: ItemFn) -> TokenStream {
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = input;
+    let Block { stmts, .. } = *block;
+    let attr_str = attr.to_string().replace(' ', "");
+    let lock_attrs: Vec<&str> = attr_str.split(',').collect();
+    let (lock_name, wait_time) = match (lock_attrs.first(), lock_attrs.get(1)) {
+        (Some(name), None) => (name, 60),
+        (Some(name), Some(sec)) => {
+            if let Ok(wait_time) = sec.parse::<usize>() {
+                (name, wait_time)
+            } else {
+                abort_call_site!("`The second parameter of #[test_with::lock]` should be a number for waiting time");
+            }
+        }
+        (None, _) => {
+            abort_call_site!("`#[test_with::lock]` need a name for the file lock");
+        }
+    };
+    let lock_file = std::env::temp_dir().join(lock_name).display().to_string();
+
+    check_before_attrs(&attrs);
+
+    if has_test_attr(&attrs) {
+        quote! {
+            #(#attrs)*
+            #vis #sig {
+                let mut _test_with_lock = None;
+                for i in 0..#wait_time {
+                    if let Ok(file) = std::fs::File::create_new(#lock_file) {
+                        _test_with_lock = Some(file);
+                        break;
+                    }
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                }
+                if _test_with_lock.is_none() {
+                    panic!("Fail to acquire the lock for the testcase")
+                }
+                #(#stmts)*
+                if std::fs::remove_file(#lock_file).is_err() {
+                    panic!("Fail to unlock the testcase")
+                }
+            }
+        }
+        .into()
+    } else {
+        quote! {
+            #(#attrs)*
+            #[test]
+            #vis #sig {
+                let mut _test_with_lock = None;
+                for i in 0..#wait_time {
+                    if let Ok(file) = std::fs::File::create_new(#lock_file) {
+                        _test_with_lock = Some(file);
+                        break;
+                    }
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                }
+                if _test_with_lock.is_none() {
+                    panic!("Fail to acquire the lock for the testcase")
+                }
+                #(#stmts)*
+                if std::fs::remove_file(#lock_file).is_err() {
+                    panic!("Fail to unlock the testcase")
+                }
+            }
+        }
+        .into()
     }
 }
 

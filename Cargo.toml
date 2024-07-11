@@ -1,6 +1,6 @@
 [package]
 name = "test-with"
-version = "0.12.6"
+version = "0.13.0"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -8,6 +8,7 @@ description = "A lib help you run test with condition"
 repository = "https://github.com/yanganto/test-with"
 keywords = [ "testing", "condition", "toggle", "integration", "ignore" ]
 categories = [ "development-tools", "testing" ]
+rust-version = "1.77.0" # Due to std::fs::create_new
 
 [lib]
 proc-macro = true

@@ -359,6 +359,38 @@ mod test_with_mock {
 
 Please check out examples uder the [example/runner](https://github.com/yanganto/test-with/tree/main/examples/runner) project.
 
+## Lock
+`#[test_with::lock(LOCK_NAME)]` is way to make sure your test casess can run one by one by using file locks.
+The first parameter is the name of the file lock, the second parameter to specific the waiting seconds,
+default will be 60 seconds.
+
+```rust
+  // `LOCK` is file based lock to prevent test1 an test2 run at the same time
+  #[test_with::lock(LOCK)]
+  fn test_1() {
+      assert!(true);
+  }
+
+  // `LOCK` is file based lock to prevent test1 an test2 run at the same time
+  #[test_with::lock(LOCK)]
+  fn test_2() {
+      assert!(true);
+  }
+
+  // `ANOTHER_LOCK` is file based lock to prevent test3 an test4 run at the same time with 3 sec
+  // waiting time.
+  #[test_with::lock(ANOTHER_LOCK, 3)]
+  fn test_3() {
+      assert!(true);
+  }
+
+  // `ANOTHER_LOCK` is file based lock to prevent test3 an test4 run at the same time with 3 sec
+  // waiting time.
+  #[test_with::lock(ANOTHER_LOCK, 3)]
+  fn test_4() {
+      assert!(true);
+  }
+```
 
 ## Relating issues
 * [Solve this in runtime][original-issue]
