@@ -57,7 +57,6 @@ use std::net::IpAddr;
 use std::net::TcpStream;
 
 use proc_macro::TokenStream;
-#[cfg(any(feature = "resource", feature = "icmp"))]
 use proc_macro_error::abort_call_site;
 use proc_macro_error::proc_macro_error;
 use syn::{parse_macro_input, ItemFn, ItemMod};
@@ -68,7 +67,7 @@ use syn::{Item, ItemStruct, ItemType};
 #[cfg(feature = "executable")]
 use which::which;
 
-use crate::utils::{fn_macro, is_module, mod_macro, sanitize_env_vars_attr};
+use crate::utils::{fn_macro, is_module, lock_macro, mod_macro, sanitize_env_vars_attr};
 
 mod utils;
 
@@ -2819,5 +2818,52 @@ mod tests {
             assert!(ignore_msg.contains(env_var2));
             assert!(!ignore_msg.contains(env_var3));
         }
+    }
+}
+
+/// Run test case one by one when the lock is acquired
+/// It will automatically implement a file lock for the test case to prevent it run in the same
+/// time. Also, you can pass the second parameter to specific the waiting seconds, default will be
+/// 60 seconds.
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // `LOCK` is file based lock to prevent test1 an test2 run at the same time
+///     #[test_with::lock(LOCK)]
+///     #[test]
+///     fn test_1() {
+///         assert!(true);
+///     }
+///
+///     // `LOCK` is file based lock to prevent test1 an test2 run at the same time
+///     #[test_with::lock(LOCK)]
+///     #[test]
+///     fn test_2() {
+///         assert!(true);
+///     }
+///
+///     // `ANOTHER_LOCK` is file based lock to prevent test3 an test4 run at the same time with 3 sec
+///     // waiting time.
+///     #[test_with::lock(ANOTHER_LOCK, 3)]
+///     fn test_3() {
+///         assert!(true);
+///     }
+///
+///     // `ANOTHER_LOCK` is file based lock to prevent test3 an test4 run at the same time with 3 sec
+///     // waiting time.
+///     #[test_with::lock(ANOTHER_LOCK, 3)]
+///     fn test_4() {
+///         assert!(true);
+///     }
+///
+/// }
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn lock(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        abort_call_site!("#[test_with::lock] only works with fn")
+    } else {
+        lock_macro(attr, parse_macro_input!(stream as ItemFn))
     }
 }

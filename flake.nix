@@ -14,7 +14,7 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        rust = pkgs.rust-bin.stable."1.74.1".default;
+        rust = pkgs.rust-bin.stable."1.77.0".default;
         dr = dependency-refresh.defaultPackage.${system};
 
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
