@@ -1148,7 +1148,7 @@ dependencies = [
 
 [[package]]
 name = "test-with"
-version = "0.12.4"
+version = "0.13.0"
 dependencies = [
  "byte-unit",
  "num_cpus",
@@ -1160,7 +1160,7 @@ dependencies = [
  "reqwest",
  "syn 2.0.28",
  "sysinfo",
- "users",
+ "uzers",
  "which",
 ]
 
@@ -1334,6 +1334,16 @@ name = "utf8parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
+
+[[package]]
+name = "uzers"
+version = "0.11.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76d283dc7e8c901e79e32d077866eaf599156cbf427fffa8289aecc52c5c3f63"
+dependencies = [
+ "libc",
+ "log",
+]
 
 [[package]]
 name = "vcpkg"
