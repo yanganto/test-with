@@ -360,7 +360,7 @@ mod test_with_mock {
 Please check out examples uder the [example/runner](https://github.com/yanganto/test-with/tree/main/examples/runner) project.
 
 ## Lock
-`#[test_with::lock(LOCK_NAME)]` is a way to run your test casess one by one wiith file locks.
+`#[test_with::lock(LOCK_NAME)]` is a way to run your test casess one by one with file locks.
 The first parameter is the name of the file lock, the second optional parameter is the waiting time in seconds,
 default will be 60 seconds.
 
