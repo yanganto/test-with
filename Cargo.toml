@@ -14,7 +14,7 @@ rust-version = "1.77.0" # Due to std::fs::create_new
 proc-macro = true
 
 [dependencies]
-proc-macro-error = "1.0"
+proc-macro-error2 = "2.0"
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = [ "full" ] }
