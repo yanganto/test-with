@@ -4,7 +4,7 @@ use proc_macro::TokenStream;
 #[cfg(feature = "ign-msg")]
 use proc_macro2::Span;
 use proc_macro2::TokenTree;
-use proc_macro_error::abort_call_site;
+use proc_macro_error2::abort_call_site;
 use quote::quote;
 #[cfg(feature = "ign-msg")]
 use syn::Signature;
