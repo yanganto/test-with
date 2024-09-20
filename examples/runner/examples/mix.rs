@@ -59,3 +59,11 @@ mod path {
         assert!(true);
     }
 }
+
+#[test_with::module]
+mod timezone {
+    #[test_with::runtime_timezone(0)]
+    fn test_works() {
+        assert!(true);
+    }
+}

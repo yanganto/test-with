@@ -391,6 +391,24 @@ default will be 60 seconds.
       assert!(true);
   }
 ```
+## Timezone
+Run test case when the machine in specific timezone
+
+```rust
+// 0 is for UTC
+#[test_with::timezone(0)]
+#[test]
+fn test_works() {
+    assert!(true);
+}
+
+// 8 for GMT+8, this test only run in the timezone
+#[test_with::timezone(+8)]
+#[test]
+fn test_run_in_TW() {
+    assert!(true)
+}
+```
 
 ## Relating issues
 * [Solve this in runtime][original-issue]
