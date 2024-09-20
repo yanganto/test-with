@@ -1,4 +1,4 @@
-test_with::runner!(env, file, path, net, user, exe, resource, custom_mod);
+test_with::runner!(env, file, path, net, user, exe, resource, custom_mod, timezone);
 
 #[test_with::module]
 mod env {
@@ -157,6 +157,18 @@ fn something_happened() -> Option<String> {
 mod custom_mod {
     #[test_with::runtime_ignore_if(something_happened)]
     fn test_ignored() {
+        assert!(false);
+    }
+}
+
+#[test_with::module]
+mod timezone {
+    #[test_with::runtime_timezone(0)]
+    fn timezone_test_works() {
+        assert!(true);
+    }
+    #[test_with::runtime_timezone(-1)]
+    fn timezone_test_ignored() {
         assert!(false);
     }
 }

@@ -1,8 +1,8 @@
 //! `test_with` provides [macro@env], [macro@file], [macro@path], [macro@http], [macro@https],
 //! [macro@icmp], [macro@tcp], [macro@root], [macro@group], [macro@user], [macro@mem], [macro@swap],
-//! [macro@cpu_core], [macro@phy_core], [macro@executable] macros to help you run test case only
-//! with the condition is fulfilled.  If the `#[test]` is absent for the test case, `#[test_with]`
-//! will add it to the test case automatically.
+//! [macro@cpu_core], [macro@phy_core], [macro@executable], [macro@timezone] macros to help you run
+//! test case only with the condition is fulfilled.  If the `#[test]` is absent for the test case,
+//! `#[test_with]` will add it to the test case automatically.
 //!
 //! This crate help you easier make integrating test case and has a good cargo summary on CI server,
 //! and will not affect on your binary output when you dependent it as dev-dependency as following.
@@ -28,14 +28,13 @@
 //! [macro@runtime_root], [macro@runtime_group], [macro@runtime_user], [macro@runtime_mem],
 //! [macro@runtime_free_mem], [macro@runtime_available_mem], [macro@runtime_swap],
 //! [macro@runtime_free_swap], [macro@runtime_available_swap], [macro@runtime_cpu_core],
-//! [macro@runtime_phy_core], [macro@runtime_executable] and [macro@runtime_ignore_if] are
-//! used to transform a normal function to a
-//! testcase.
+//! [macro@runtime_phy_core], [macro@runtime_executable], [macro@runtime_timezone]
+//! and [macro@runtime_ignore_if] are used to transform a normal function to a testcase.
 //!
 //! ```toml
 //! [dependencies]
 //! test-with = { version = "*", default-features = false, features = ["runtime"] }
-//! libtest-with = { version = "0.6.1-6", features = ["net", "resource", "user", "executable"] }
+//! libtest-with = { version = "0.7.0-3", features = ["net", "resource", "user", "executable", "timezone"] }
 //! ```
 //!
 //! ```rust
@@ -2866,4 +2865,161 @@ pub fn lock(attr: TokenStream, stream: TokenStream) -> TokenStream {
     } else {
         lock_macro(attr, parse_macro_input!(stream as ItemFn))
     }
+}
+
+/// Run test case when the timezone is expected.
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // 0 means UTC
+///     #[test_with::timezone(0)]
+///     #[test]
+///     fn test_works() {
+///         assert!(true);
+///     }
+///
+///     // +8 means GMT+8
+///     #[test_with::timezone(+8)]
+///     #[test]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[cfg(feature = "timezone")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            check_tz_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            check_tz_condition,
+        )
+    }
+}
+
+#[cfg(feature = "timezone")]
+fn check_tz_condition(attr_str: String) -> (bool, String) {
+    let mut incorrect_tzs = vec![];
+    let mut match_tz = false;
+    let current_tz = chrono::Local::now().offset().local_minus_utc() / 60;
+    for tz in attr_str.split(',') {
+        if let Ok(parsed_tz) = tz.parse::<i32>() {
+            match_tz |= current_tz == parsed_tz;
+        } else {
+            incorrect_tzs.push(tz);
+        }
+    }
+
+    // Generate ignore message
+    if incorrect_tzs.len() == 1 {
+        (
+            false,
+            format!("because timezone {} is incorrect", incorrect_tzs[0]),
+        )
+    } else if incorrect_tzs.len() > 1 {
+        (
+            false,
+            format!(
+                "because following timezones are incorrect:\n{}\n",
+                incorrect_tzs.join(", ")
+            ),
+        )
+    } else if match_tz {
+        (true, String::new())
+    } else {
+        (
+            false,
+            format!(
+                "because the test case not run in following timezone:\n{}\n",
+                attr_str
+            ),
+        )
+    }
+}
+
+/// Run test case when the example running within specific timzones.
+///```rust
+/// // write as example in examples/*rs
+/// test_with::runner!(timezone);
+/// #[test_with::module]
+/// mod timezone {
+///     // 0 means UTC timezone
+///     #[test_with::runtime_timezone(0)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_timezone(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime", feature = "timezone"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let attr_str = attr.to_string();
+    let ItemFn {
+        attrs,
+        vis,
+        sig,
+        block,
+    } = parse_macro_input!(stream as ItemFn);
+    let syn::Signature { ident, .. } = sig.clone();
+    let check_ident = syn::Ident::new(
+        &format!("_check_{}", ident.to_string()),
+        proc_macro2::Span::call_site(),
+    );
+    quote::quote! {
+        fn #check_ident() -> Result<(), libtest_with::Failed> {
+
+            let mut incorrect_tzs = vec![];
+            let mut match_tz = false;
+            let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
+            for tz in #attr_str.split(',') {
+                if let Ok(parsed_tz) = tz.parse::<i32>() {
+                    match_tz |= current_tz == parsed_tz;
+                } else {
+                    incorrect_tzs.push(tz);
+                }
+            }
+
+            if match_tz && incorrect_tzs.is_empty() {
+                    #ident();
+                    Ok(())
+            } else if incorrect_tzs.len() == 1 {
+                Err(
+                    format!("{}because timezone {} is incorrect",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
+                ).into())
+            } else if incorrect_tzs.len() > 1 {
+                Err(
+                    format!("{}because following timezones are incorrect:\n{:?}\n",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
+                ).into())
+            } else {
+                Err(
+                    format!(
+                    "{}because the test case not run in following timezone:\n{}\n",
+                    libtest_with::RUNTIME_IGNORE_PREFIX,
+                    #attr_str
+                ).into())
+            }
+        }
+
+        #(#attrs)*
+        #vis #sig #block
+    }
+    .into()
 }

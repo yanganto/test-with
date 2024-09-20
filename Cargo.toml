@@ -1,6 +1,6 @@
 [package]
 name = "test-with"
-version = "0.13.1"
+version = "0.14.0"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -26,12 +26,13 @@ sysinfo = { version = "0.30", optional = true }
 byte-unit = { version = "5.0", optional = true }
 num_cpus = { version = "1.13", optional = true }
 which = { version = "5.0", optional = true }
+chrono = { version = "0.4", optional = true }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 uzers = { version = "0.11.3", optional = true }
 
 [features]
-default = ["net", "resource", "user", "executable"]
+default = ["net", "resource", "user", "executable", "timezone"]
 ign-msg = []
 
 runtime = []
@@ -42,9 +43,10 @@ icmp = ["ping"]
 resource = ["sysinfo", "byte-unit", "num_cpus"]
 user = ["uzers"]
 executable = ["which"]
+timezone = ["chrono"]
 
 [dev-dependencies]
 tokio = { version = "1.38.0", features = ["rt", "rt-multi-thread", "macros"] }
 serial_test = "3.1.1"
-libtest-with = { version = "0.7.0-0", features = ["net", "resource", "user", "executable"] }
+libtest-with = { version = "0.7.0-3", features = ["net", "resource", "user", "executable", "timezone"] }
 rstest = "0.21.0"
