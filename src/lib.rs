@@ -2879,10 +2879,24 @@ pub fn lock(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///         assert!(true);
 ///     }
 ///
+///     // UTC is GMT+0
+///     #[test_with::timezone(UTC)]
+///     #[test]
+///     fn test_works_too() {
+///         assert!(true);
+///     }
+///
 ///     // +8 means GMT+8
 ///     #[test_with::timezone(+8)]
 ///     #[test]
 ///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+///
+///     // HKT GMT+8
+///     #[test_with::timezone(HKT)]
+///     #[test]
+///     fn test_ignored_too() {
 ///         panic!("should be ignored")
 ///     }
 /// }
@@ -2907,17 +2921,53 @@ pub fn timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
 }
 
 #[cfg(feature = "timezone")]
-fn check_tz_condition(attr_str: String) -> (bool, String) {
+fn check_timezone(attr_str: &String) -> (bool, Vec<&str>) {
     let mut incorrect_tzs = vec![];
     let mut match_tz = false;
     let current_tz = chrono::Local::now().offset().local_minus_utc() / 60;
+
     for tz in attr_str.split(',') {
-        if let Ok(parsed_tz) = tz.parse::<i32>() {
+        let parsed_tz = match tz {
+            "NZDT" => Ok(13),
+            "NZST" => Ok(12),
+            "AEDT" => Ok(11),
+            // "ACDT" => Ok(10.5)
+            "AEST" => Ok(10),
+            // "ACST" => Ok(9.5)
+            "KST" | "JST" => Ok(9),
+            "HKT" | "WITA" | "AWST" => Ok(8), // Duplicate PST
+            "WIB" => Ok(7),
+            // "CST" => Ok(8),  // Duplicate CST
+            // "IST" => Ok(5.5)
+            "PKT" => Ok(5),
+            "EAT" | "EEST" | "IDT" | "MSK" => Ok(3),
+            "CAT" | "EET" | "CEST" | "SAST" => Ok(2), // Duplicate IST
+            "CET" | "WAT" | "WEST" | "BST" => Ok(1),
+            "UTC" | "GMT" | "WET" => Ok(0),
+            // "NDT" => Ok(-2.5)
+            // "NST" => Ok(-3.5)
+            "ADT" => Ok(-3),
+            "AST" | "EDT" => Ok(-4),
+            "EST" | "CDT" => Ok(-5),
+            "MDT" => Ok(-6), // Another CST here
+            "MST" | "PDT" => Ok(-7),
+            "AKDT" => Ok(-8), // Another PST here
+            "HDT" | "AKST" => Ok(-9),
+            "HST" => Ok(-10),
+            _ => tz.parse::<i32>(),
+        };
+        if let Ok(parsed_tz) = parsed_tz {
             match_tz |= current_tz == parsed_tz;
         } else {
             incorrect_tzs.push(tz);
         }
     }
+    (match_tz, incorrect_tzs)
+}
+
+#[cfg(feature = "timezone")]
+fn check_tz_condition(attr_str: String) -> (bool, String) {
+    let (match_tz, incorrect_tzs) = check_timezone(&attr_str);
 
     // Generate ignore message
     if incorrect_tzs.len() == 1 {
