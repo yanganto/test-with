@@ -22,7 +22,7 @@
           cargo publish
         '';
         updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
-          dr ./Cargo.toml
+          dr -p ./Cargo.toml
           if [ -f "Cargo.toml.old" ]; then
             rm Cargo.toml.old
             exit 1
