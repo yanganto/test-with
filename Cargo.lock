@@ -1032,9 +1032,9 @@ checksum = "5aaeb2981e0606ca11d79718f8bb01164f1d6ed75080182d3abf017e6d244b6d"
 
 [[package]]
 name = "libtest-with"
-version = "0.8.1-2"
+version = "0.8.1-3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a7e642427d8a002f96e8256157f390ee52adc101de6c759ce0f42866e27c4fe"
+checksum = "b012014c92eaf3fdc00a35ee62c8b77fee4d227b8c31edb7984f1667907a2504"
 dependencies = [
  "anstream",
  "anstyle",
