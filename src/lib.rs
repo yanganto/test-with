@@ -34,7 +34,7 @@
 //! ```toml
 //! [dependencies]
 //! test-with = { version = "*", default-features = false, features = ["runtime"] }
-//! libtest-with = { version = "0.7.0-3", features = ["net", "resource", "user", "executable", "timezone"] }
+//! libtest-with = { version = "0.8.1-3", features = ["net", "resource", "user", "executable", "timezone"] }
 //! ```
 //!
 //! ```rust
@@ -1189,7 +1189,7 @@ pub fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStream {
     );
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
-            if 0 == libtest_with::users::get_current_uid() {
+            if 0 == libtest_with::uzers::get_current_uid() {
                 #ident();
                 Ok(())
             } else {
@@ -1298,8 +1298,8 @@ pub fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStream {
     quote::quote! {
 
         fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let current_user_id = libtest_with::users::get_current_uid();
-            let in_group = match libtest_with::users::get_user_by_uid(current_user_id) {
+            let current_user_id = libtest_with::uzers::get_current_uid();
+            let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
                 Some(user) => {
                     let mut in_group = false;
                     for group in user.groups().expect("user not found") {
@@ -1412,7 +1412,7 @@ pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
     quote::quote! {
 
         fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let is_user = match libtest_with::users::get_current_username() {
+            let is_user = match libtest_with::uzers::get_current_username() {
                 Some(uname) => uname.to_string_lossy() == #user_name,
                 None => false,
             };
@@ -1468,7 +1468,8 @@ pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(feature = "resource")]
 fn check_mem_condition(mem_size_str: String) -> (bool, String) {
     let sys = sysinfo::System::new_with_specifics(
-        sysinfo::RefreshKind::new().with_memory(sysinfo::MemoryRefreshKind::new().with_swap()),
+        sysinfo::RefreshKind::nothing()
+            .with_memory(sysinfo::MemoryRefreshKind::nothing().with_swap()),
     );
     let mem_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
         Ok(b) => b,
@@ -1526,7 +1527,7 @@ pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
             let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_ram()),
+                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
             );
             let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
                 Ok(b) => b,
@@ -1591,7 +1592,7 @@ pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
             let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_ram()),
+                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
             );
             let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
                 Ok(b) => b,
@@ -1656,7 +1657,7 @@ pub fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStr
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
             let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_ram()),
+                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
             );
             let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
                 Ok(b) => b,
@@ -1715,7 +1716,8 @@ pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(feature = "resource")]
 fn check_swap_condition(swap_size_str: String) -> (bool, String) {
     let sys = sysinfo::System::new_with_specifics(
-        sysinfo::RefreshKind::new().with_memory(sysinfo::MemoryRefreshKind::new().with_swap()),
+        sysinfo::RefreshKind::nothing()
+            .with_memory(sysinfo::MemoryRefreshKind::nothing().with_swap()),
     );
     let swap_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
         Ok(b) => b,
@@ -1773,7 +1775,7 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
             let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_swap()),
+                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
             );
             let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
                 Ok(b) => b,
@@ -1838,7 +1840,7 @@ pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream 
     quote::quote! {
         fn #check_ident() -> Result<(), libtest_with::Failed> {
             let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::new().with_memory(libtest_with::sysinfo::MemoryRefreshKind::new().with_swap()),
+                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
             );
             let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
                 Ok(b) => b,
