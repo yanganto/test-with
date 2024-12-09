@@ -1468,7 +1468,8 @@ pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(feature = "resource")]
 fn check_mem_condition(mem_size_str: String) -> (bool, String) {
     let sys = sysinfo::System::new_with_specifics(
-        sysinfo::RefreshKind::new().with_memory(sysinfo::MemoryRefreshKind::new().with_swap()),
+        sysinfo::RefreshKind::nothing()
+            .with_memory(sysinfo::MemoryRefreshKind::nothing().with_swap()),
     );
     let mem_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
         Ok(b) => b,
@@ -1715,7 +1716,8 @@ pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(feature = "resource")]
 fn check_swap_condition(swap_size_str: String) -> (bool, String) {
     let sys = sysinfo::System::new_with_specifics(
-        sysinfo::RefreshKind::new().with_memory(sysinfo::MemoryRefreshKind::new().with_swap()),
+        sysinfo::RefreshKind::nothing()
+            .with_memory(sysinfo::MemoryRefreshKind::nothing().with_swap()),
     );
     let swap_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
         Ok(b) => b,
