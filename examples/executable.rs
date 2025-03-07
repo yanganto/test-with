@@ -29,4 +29,11 @@ mod tests {
     fn test_executables_too() {
         assert!(true);
     }
+
+    // `non` or `ls` exist
+    #[test_with::executable(non || ls)]
+    #[test]
+    fn test_one_of_executables_exist() {
+        assert!(true);
+    }
 }

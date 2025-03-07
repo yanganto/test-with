@@ -2101,6 +2101,13 @@ pub fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStre
 ///     fn test_executables_too() {
 ///         assert!(true);
 ///     }
+///
+///     // `non` or `ls` exist
+///     #[test_with::executable(non || ls)]
+///     #[test]
+///     fn test_one_of_executables_exist() {
+///         assert!(true);
+///     }
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -2123,7 +2130,7 @@ pub fn executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
 }
 
 #[cfg(feature = "executable")]
-fn check_executable_condition(attr_str: String) -> (bool, String) {
+fn check_executable_and_condition(attr_str: String) -> (bool, String) {
     let executables: Vec<&str> = attr_str.split(',').collect();
     let mut missing_executables = vec![];
     for exe in executables.iter() {
@@ -2140,6 +2147,33 @@ fn check_executable_condition(attr_str: String) -> (bool, String) {
         )
     };
     (missing_executables.is_empty(), ignore_msg)
+}
+
+#[cfg(feature = "executable")]
+fn check_executable_or_condition(attr_str: String) -> (bool, String) {
+    let executables: Vec<&str> = attr_str.split("||").collect();
+    for exe in executables.iter() {
+        if which(exe.trim_matches('"')).is_ok() {
+            return (true, String::new());
+        }
+    }
+    (
+        false,
+        format!("because none of executables can be found: {}", attr_str),
+    )
+}
+
+#[cfg(feature = "executable")]
+fn check_executable_condition(attr_str: String) -> (bool, String) {
+    let has_and_cond = attr_str.contains(',');
+    let has_or_cond = attr_str.contains("||");
+    if has_and_cond && has_or_cond {
+        abort_call_site!("',' and '||' can not be used at the same time")
+    } else if has_or_cond {
+        check_executable_or_condition(attr_str)
+    } else {
+        check_executable_and_condition(attr_str)
+    }
 }
 
 /// Run test case when the executable existing
@@ -2165,7 +2199,16 @@ pub fn runtime_executable(_attr: TokenStream, _stream: TokenStream) -> TokenStre
 #[proc_macro_error]
 pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let attr_str = attr.to_string().replace(' ', "");
-    let executables: Vec<&str> = attr_str.split(',').collect();
+    let has_and_cond = attr_str.contains(',');
+    let has_or_cond = attr_str.contains("||");
+    if has_and_cond && has_or_cond {
+        abort_call_site!("',' and '||' can not be used at the same time")
+    }
+    let executables: Vec<&str> = if has_or_cond {
+        attr_str.split("||").collect()
+    } else {
+        attr_str.split(',').collect()
+    };
     let ItemFn {
         attrs,
         vis,
@@ -2178,35 +2221,55 @@ pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let mut missing_executables = vec![];
-            #(
-                if libtest_with::which::which(#executables).is_err() {
-                    missing_executables.push(#executables);
-                }
-            )*
-            match missing_executables.len() {
-                0 => {
-                    #ident();
-                    Ok(())
-                },
-                1 => Err(
-                    format!("{}because executable {} not found",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
-                ).into()),
-                _ => Err(
-                    format!("{}because following executables not found:\n{}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
-                ).into()),
+    if has_or_cond {
+        quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                #(
+                    if libtest_with::which::which(#executables).is_ok() {
+                        #ident();
+                        return Ok(());
+                    }
+                )*
+                Err(format!("{}because none of executables can be found:\n{}\n",
+                    libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
             }
+
+            #(#attrs)*
+            #vis #sig #block
+
         }
+        .into()
+    } else {
+        quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_executables = vec![];
+                #(
+                    if libtest_with::which::which(#executables).is_err() {
+                        missing_executables.push(#executables);
+                    }
+                )*
+                match missing_executables.len() {
+                    0 => {
+                        #ident();
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because executable {} not found",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following executables not found:\n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
+                    ).into()),
+                }
+            }
 
-        #(#attrs)*
-        #vis #sig #block
+            #(#attrs)*
+            #vis #sig #block
 
+        }
+        .into()
     }
-    .into()
 }
 
 /// Provide a test runner and test on each module
