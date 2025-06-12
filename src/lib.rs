@@ -931,9 +931,9 @@ pub fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStream {
         (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<(), libtest_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::blocking::Client::new();
+                let client = libtest_with::reqwest::Client::new();
                 #(
-                    if client.head(&format!("http://{}", #links)).send().is_err() {
+                    if client.head(&format!("http://{}", #links)).send().await.is_err() {
                         missing_links.push(format!("http://{}", #links));
                     }
                 )*
@@ -956,9 +956,9 @@ pub fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStream {
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
             async fn #check_ident() -> Result<(), libtest_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::blocking::Client::new();
+                let client = libtest_with::reqwest::Client::new();
                 #(
-                    if client.head(&format!("http://{}", #links)).send().is_err() {
+                    if client.head(&format!("http://{}", #links)).send().await.is_err() {
                         missing_links.push(format!("http://{}", #links));
                     }
                 )*
@@ -1117,9 +1117,9 @@ pub fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStream {
         (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<(), libtest_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::blocking::Client::new();
+                let client = libtest_with::reqwest::Client::new();
                 #(
-                    if client.head(&format!("https://{}", #links)).send().is_err() {
+                    if client.head(&format!("https://{}", #links)).send().await.is_err() {
                         missing_links.push(format!("https://{}", #links));
                     }
                 )*
@@ -1142,9 +1142,9 @@ pub fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStream {
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
             async fn #check_ident() -> Result<(), libtest_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::blocking::Client::new();
+                let client = libtest_with::reqwest::Client::new();
                 #(
-                    if client.head(&format!("https://{}", #links)).send().is_err() {
+                    if client.head(&format!("https://{}", #links)).send().await.is_err() {
                         missing_links.push(format!("https://{}", #links));
                     }
                 )*
@@ -3494,7 +3494,7 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                             let mut failed = 0;
                             let mut passed = 0;
                             let mut ignored = 0;
-                            println!("running {} tests\n", #total);
+                            println!("running {} tests of {}\n", #total, stringify!(#ident));
                             #(
                                 print!("test {}::{} ... ", stringify!(#ident), #test_names);
                                 if let Err(e) = #check_names().await {
@@ -3546,7 +3546,7 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                             let mut failed = 0;
                             let mut passed = 0;
                             let mut ignored = 0;
-                            println!("running {} tests\n", #total);
+                            println!("running {} tests of {}\n", #total, stringify!(#ident));
                             #(
                                 print!("test {}::{} ... ", stringify!(#ident), #test_names);
                                 if let Err(e) = #check_names().await {
