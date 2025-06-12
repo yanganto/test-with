@@ -9,7 +9,8 @@ test_with::tokio_runner!(
     exe_tests,
     resource_tests,
     custom_mod,
-    timezone_tests
+    timezone_tests,
+    net_with_mock
 );
 
 #[test_with::module]
@@ -155,6 +156,40 @@ mod timezone_tests {
     }
     #[test_with::runtime_timezone(-1)]
     async fn timezone_test_ignored() {
+        assert!(false);
+    }
+}
+
+#[test_with::module]
+mod net_with_mock {
+    pub struct TestEnv {
+        p: std::process::Child,
+    }
+
+    impl Default for TestEnv {
+        fn default() -> TestEnv {
+            let p = std::process::Command::new("python")
+                .args(["-m", "http.server", "8080"])
+                .spawn()
+                .expect("failed to execute child");
+            std::thread::sleep(std::time::Duration::from_secs(3));
+            TestEnv { p }
+        }
+    }
+
+    impl std::ops::Drop for TestEnv {
+        fn drop(&mut self) {
+            self.p.kill().expect("fail to kill python http.server");
+        }
+    }
+
+    #[test_with::runtime_http(127.0.0.1:8080)]
+    async fn test_with_environment() {
+        assert!(true);
+    }
+
+    #[test_with::runtime_http(127.0.0.1:9000)]
+    async fn test_will_ignore() {
         assert!(false);
     }
 }

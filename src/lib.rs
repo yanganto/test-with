@@ -3491,6 +3491,7 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                         }
                         #[cfg(feature = "test-with-async")]
                         pub async fn _runtime_tests() {
+                            let env = #test_env_type::default();
                             let mut failed = 0;
                             let mut passed = 0;
                             let mut ignored = 0;
@@ -3515,6 +3516,7 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                     passed += 1;
                                 }
                             )*
+                            drop(env);
                             if failed > 0 {
                                 println!("\ntest result: failed. {passed} passed; {failed} failed; {ignored} ignored;\n");
                                 std::process::exit(1);
