@@ -3473,6 +3473,7 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     )
                 })
                 .collect();
+            let total = check_names.len();
             if let Some(test_env_type) = test_env_type {
                 quote::quote! {
                     #(#attrs)*
@@ -3490,27 +3491,35 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                         }
                         #[cfg(feature = "test-with-async")]
                         pub async fn _runtime_tests() {
-                            let mut has_fail = false;
+                            let mut failed = 0;
+                            let mut passed = 0;
+                            let mut ignored = 0;
+                            println!("running {} tests\n", #total);
                             #(
-                                print!("{}::{} ... ", stringify!(#ident), #test_names);
+                                print!("test {}::{} ... ", stringify!(#ident), #test_names);
                                 if let Err(e) = #check_names().await {
                                     if let Some(msg) = e.message() {
                                         if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
                                             println!("ignored, {}", msg[12..].to_string());
+                                            ignored += 1;
                                         } else {
                                             println!("FAILED, {msg}");
-                                            has_fail = true;
+                                            failed += 1;
                                         }
                                     } else {
                                         println!("FAILED");
-                                        has_fail = true;
+                                        failed += 1;
                                     }
                                 } else {
                                     println!("ok");
+                                    passed += 1;
                                 }
                             )*
-                            if has_fail {
+                            if failed > 0 {
+                                println!("\ntest result: failed. {passed} passed; {failed} failed; {ignored} ignored;\n");
                                 std::process::exit(1);
+                            } else {
+                                println!("\ntest result: ok. {passed} passed; {failed} failed; {ignored} ignored;\n");
                             }
                         }
                         #(#content)*
@@ -3534,22 +3543,36 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                         }
                         #[cfg(feature = "test-with-async")]
                         pub async fn _runtime_tests() {
+                            let mut failed = 0;
+                            let mut passed = 0;
+                            let mut ignored = 0;
+                            println!("running {} tests\n", #total);
                             #(
-                                print!("{}::{} ... ", stringify!(#ident), #test_names);
+                                print!("test {}::{} ... ", stringify!(#ident), #test_names);
                                 if let Err(e) = #check_names().await {
                                     if let Some(msg) = e.message() {
                                         if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
                                             println!("ignored, {}", msg[12..].to_string());
+                                            ignored += 1;
                                         } else {
                                             println!("FAILED, {msg}");
+                                            failed += 1;
                                         }
                                     } else {
                                         println!("FAILED");
+                                        failed += 1;
                                     }
                                 } else {
                                     println!("ok");
+                                    passed += 1;
                                 }
                             )*
+                            if failed > 0 {
+                                println!("\ntest result: failed. {passed} passed; {failed} failed; {ignored} ignored;\n");
+                                std::process::exit(1);
+                            } else {
+                                println!("\ntest result: ok. {passed} passed; {failed} failed; {ignored} ignored;\n");
+                            }
                         }
                         #(#content)*
                     }
