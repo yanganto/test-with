@@ -58,6 +58,8 @@ use std::net::TcpStream;
 use proc_macro::TokenStream;
 use proc_macro_error2::abort_call_site;
 use proc_macro_error2::proc_macro_error;
+#[cfg(feature = "runtime")]
+use syn::ReturnType;
 use syn::{parse_macro_input, ItemFn, ItemMod};
 
 #[cfg(feature = "runtime")]
@@ -188,32 +190,89 @@ pub fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let mut missing_vars = vec![];
-            #(
-                if std::env::var(#var_names).is_err() {
-                    missing_vars.push(#var_names);
-                }
-            )*
-            match missing_vars.len() {
-                0 => {
-                    #ident();
-                    Ok(())
-                },
-                1 => Err(
-                    format!("{}because variable {} not found",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
-                ).into()),
-                _ => Err(
-                    format!("{}because following variables not found:\n{}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
-                ).into()),
-            }
-        }
 
-        #(#attrs)*
-        #vis #sig #block
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_vars = vec![];
+                #(
+                    if std::env::var(#var_names).is_err() {
+                        missing_vars.push(#var_names);
+                    }
+                )*
+                match missing_vars.len() {
+                    0 => {
+                        let _ = #ident().await;
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because variable {} not found",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following variables not found:\n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_vars = vec![];
+                #(
+                    if std::env::var(#var_names).is_err() {
+                        missing_vars.push(#var_names);
+                    }
+                )*
+                match missing_vars.len() {
+                    0 => {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    1 => Err(
+                        format!("{}because variable {} not found",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following variables not found:\n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_vars = vec![];
+                #(
+                    if std::env::var(#var_names).is_err() {
+                        missing_vars.push(#var_names);
+                    }
+                )*
+                match missing_vars.len() {
+                    0 => {
+                        #ident();
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because variable {} not found",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following variables not found:\n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
+                    ).into()),
+                }
+            }
+        },
+    };
+
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -309,32 +368,89 @@ pub fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let mut should_no_exist_vars = vec![];
-            #(
-                if std::env::var(#var_names).is_ok() {
-                    should_no_exist_vars.push(#var_names);
-                }
-            )*
-            match should_no_exist_vars.len() {
-                0 => {
-                    #ident();
-                    Ok(())
-                },
-                1 => Err(
-                    format!("{}because variable {} found",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
-                ).into()),
-                _ => Err(
-                    format!("{}because following variables found:\n{}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
-                ).into()),
-            }
-        }
 
-        #(#attrs)*
-        #vis #sig #block
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut should_no_exist_vars = vec![];
+                #(
+                    if std::env::var(#var_names).is_ok() {
+                        should_no_exist_vars.push(#var_names);
+                    }
+                )*
+                match should_no_exist_vars.len() {
+                    0 => {
+                        #ident().await;
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because variable {} found",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following variables found:\n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut should_no_exist_vars = vec![];
+                #(
+                    if std::env::var(#var_names).is_ok() {
+                        should_no_exist_vars.push(#var_names);
+                    }
+                )*
+                match should_no_exist_vars.len() {
+                    0 => {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    1 => Err(
+                        format!("{}because variable {} found",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following variables found:\n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut should_no_exist_vars = vec![];
+                #(
+                    if std::env::var(#var_names).is_ok() {
+                        should_no_exist_vars.push(#var_names);
+                    }
+                )*
+                match should_no_exist_vars.len() {
+                    0 => {
+                        #ident();
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because variable {} found",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following variables found:\n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
+                    ).into()),
+                }
+            }
+        },
+    };
+
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -438,33 +554,91 @@ pub fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let mut missing_files = vec![];
-            #(
-                if !std::path::Path::new(#files.trim_matches('"')).is_file() {
-                    missing_files.push(#files);
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_files = vec![];
+                #(
+                    if !std::path::Path::new(#files.trim_matches('"')).is_file() {
+                        missing_files.push(#files);
+                    }
+                )*
+
+                match missing_files.len() {
+                    0 => {
+                        #ident().await;
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because file not found: {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following files not found: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
+                    ).into()),
                 }
-            )*
-
-            match missing_files.len() {
-                0 => {
-                    #ident();
-                    Ok(())
-                },
-                1 => Err(
-                    format!("{}because file not found: {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
-                ).into()),
-                _ => Err(
-                    format!("{}because following files not found: \n{}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
-                ).into()),
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_files = vec![];
+                #(
+                    if !std::path::Path::new(#files.trim_matches('"')).is_file() {
+                        missing_files.push(#files);
+                    }
+                )*
 
-        #(#attrs)*
-        #vis #sig #block
+                match missing_files.len() {
+                    0 => {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    1 => Err(
+                        format!("{}because file not found: {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following files not found: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_files = vec![];
+                #(
+                    if !std::path::Path::new(#files.trim_matches('"')).is_file() {
+                        missing_files.push(#files);
+                    }
+                )*
+
+                match missing_files.len() {
+                    0 => {
+                        #ident();
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because file not found: {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following files not found: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
+                    ).into()),
+                }
+            }
+        },
+    };
+
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -568,33 +742,92 @@ pub fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let mut missing_paths = vec![];
-            #(
-                if std::fs::metadata(#paths.trim_matches('"')).is_err() {
-                    missing_paths.push(#paths.to_string());
+
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_paths = vec![];
+                #(
+                    if std::fs::metadata(#paths.trim_matches('"')).is_err() {
+                        missing_paths.push(#paths.to_string());
+                    }
+                )*
+
+                match missing_paths.len() {
+                    0 => {
+                        #ident().await;
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because path not found: {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following paths not found: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
+                    ).into()),
                 }
-            )*
-
-            match missing_paths.len() {
-                0 => {
-                    #ident();
-                    Ok(())
-                },
-                1 => Err(
-                    format!("{}because path not found: {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
-                ).into()),
-                _ => Err(
-                    format!("{}because following paths not found: \n{}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
-                ).into()),
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_paths = vec![];
+                #(
+                    if std::fs::metadata(#paths.trim_matches('"')).is_err() {
+                        missing_paths.push(#paths.to_string());
+                    }
+                )*
 
-        #(#attrs)*
-        #vis #sig #block
+                match missing_paths.len() {
+                    0 => {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    1 => Err(
+                        format!("{}because path not found: {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following paths not found: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_paths = vec![];
+                #(
+                    if std::fs::metadata(#paths.trim_matches('"')).is_err() {
+                        missing_paths.push(#paths.to_string());
+                    }
+                )*
+
+                match missing_paths.len() {
+                    0 => {
+                        #ident();
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because path not found: {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following paths not found: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
+                    ).into()),
+                }
+            }
+        },
+    };
+
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -694,34 +927,92 @@ pub fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-
-            let mut missing_links = vec![];
-            let client = libtest_with::reqwest::blocking::Client::new();
-            #(
-                if client.head(&format!("http://{}", #links)).send().is_err() {
-                    missing_links.push(format!("http://{}", #links));
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_links = vec![];
+                let client = libtest_with::reqwest::Client::new();
+                #(
+                    if client.head(&format!("http://{}", #links)).send().await.is_err() {
+                        missing_links.push(format!("http://{}", #links));
+                    }
+                )*
+                match missing_links.len() {
+                    0 => {
+                        #ident().await;
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following links not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
+                    ).into()),
                 }
-            )*
-            match missing_links.len() {
-                0 => {
-                    #ident();
-                    Ok(())
-                },
-                1 => Err(
-                    format!("{}because {} not response",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                ).into()),
-                _ => Err(
-                    format!("{}because following links not response: \n{}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                ).into()),
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_links = vec![];
+                let client = libtest_with::reqwest::Client::new();
+                #(
+                    if client.head(&format!("http://{}", #links)).send().await.is_err() {
+                        missing_links.push(format!("http://{}", #links));
+                    }
+                )*
+                match missing_links.len() {
+                    0 => {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following links not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
 
-        #(#attrs)*
-        #vis #sig #block
+                let mut missing_links = vec![];
+                let client = libtest_with::reqwest::blocking::Client::new();
+                #(
+                    if client.head(&format!("http://{}", #links)).send().is_err() {
+                        missing_links.push(format!("http://{}", #links));
+                    }
+                )*
+                match missing_links.len() {
+                    0 => {
+                        #ident();
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following links not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
+                    ).into()),
+                }
+            }
+        },
+    };
+
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -821,34 +1112,92 @@ pub fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
 
-            let mut missing_links = vec![];
-            let client = libtest_with::reqwest::blocking::Client::new();
-            #(
-                if client.head(&format!("https://{}", #links)).send().is_err() {
-                    missing_links.push(format!("https://{}", #links));
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_links = vec![];
+                let client = libtest_with::reqwest::Client::new();
+                #(
+                    if client.head(&format!("https://{}", #links)).send().await.is_err() {
+                        missing_links.push(format!("https://{}", #links));
+                    }
+                )*
+                match missing_links.len() {
+                    0 => {
+                        #ident().await;
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following links not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
+                    ).into()),
                 }
-            )*
-            match missing_links.len() {
-                0 => {
-                    #ident();
-                    Ok(())
-                },
-                1 => Err(
-                    format!("{}because {} not response",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                ).into()),
-                _ => Err(
-                    format!("{}because following links not response: \n{}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                ).into()),
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_links = vec![];
+                let client = libtest_with::reqwest::Client::new();
+                #(
+                    if client.head(&format!("https://{}", #links)).send().await.is_err() {
+                        missing_links.push(format!("https://{}", #links));
+                    }
+                )*
+                match missing_links.len() {
+                    0 => {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following links not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_links = vec![];
+                let client = libtest_with::reqwest::blocking::Client::new();
+                #(
+                    if client.head(&format!("https://{}", #links)).send().is_err() {
+                        missing_links.push(format!("https://{}", #links));
+                    }
+                )*
+                match missing_links.len() {
+                    0 => {
+                        #ident();
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following links not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
+                    ).into()),
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -955,34 +1304,90 @@ pub fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
 
-            let mut missing_ips = vec![];
-            #(
-                if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
-                    missing_ips.push(#ips);
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_ips = vec![];
+                #(
+                    if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
+                        missing_ips.push(#ips);
+                    }
+                )*
+                match missing_ips.len() {
+                    0 => {
+                        #ident().await;
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following ips not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
+                    ).into()),
                 }
-            )*
-            match missing_ips.len() {
-                0 => {
-                    #ident();
-                    Ok(())
-                }
-                ,
-                1 => Err(
-                    format!("{}because {} not response",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
-                ).into()),
-                _ => Err(
-                    format!("{}because following ips not response: \n{}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
-                ).into()),
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_ips = vec![];
+                #(
+                    if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
+                        missing_ips.push(#ips);
+                    }
+                )*
+                match missing_ips.len() {
+                    0 => {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following ips not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_ips = vec![];
+                #(
+                    if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
+                        missing_ips.push(#ips);
+                    }
+                )*
+                match missing_ips.len() {
+                    0 => {
+                        #ident();
+                        Ok(())
+                    }
+                    ,
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following ips not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
+                    ).into()),
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1081,33 +1486,89 @@ pub fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
 
-            let mut missing_sockets = vec![];
-            #(
-                if std::net::TcpStream::connect(#sockets).is_err() {
-                    missing_sockets.push(#sockets);
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_sockets = vec![];
+                #(
+                    if std::net::TcpStream::connect(#sockets).is_err() {
+                        missing_sockets.push(#sockets);
+                    }
+                )*
+                match missing_sockets.len() {
+                    0 => {
+                        #ident().await;
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following sockets not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets.join(", ")
+                    ).into()),
                 }
-            )*
-            match missing_sockets.len() {
-                0 => {
-                    #ident();
-                    Ok(())
-                },
-                1 => Err(
-                    format!("{}because {} not response",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets[0]
-                ).into()),
-                _ => Err(
-                    format!("{}because following sockets not response: \n{}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets.join(", ")
-                ).into()),
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_sockets = vec![];
+                #(
+                    if std::net::TcpStream::connect(#sockets).is_err() {
+                        missing_sockets.push(#sockets);
+                    }
+                )*
+                match missing_sockets.len() {
+                    0 => {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following sockets not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_sockets = vec![];
+                #(
+                    if std::net::TcpStream::connect(#sockets).is_err() {
+                        missing_sockets.push(#sockets);
+                    }
+                )*
+                match missing_sockets.len() {
+                    0 => {
+                        #ident();
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because {} not response",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following sockets not response: \n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets.join(", ")
+                    ).into()),
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1187,18 +1648,47 @@ pub fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            if 0 == libtest_with::uzers::get_current_uid() {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
-            }
-        }
 
-        #(#attrs)*
-        #vis #sig #block
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if 0 == libtest_with::uzers::get_current_uid() {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                }
+            }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if 0 == libtest_with::uzers::get_current_uid() {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if 0 == libtest_with::uzers::get_current_uid() {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                }
+            }
+        },
+    };
+
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1295,35 +1785,91 @@ pub fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStream {
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let current_user_id = libtest_with::uzers::get_current_uid();
-            let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
-                Some(user) => {
-                    let mut in_group = false;
-                    for group in user.groups().expect("user not found") {
-                        if in_group {
-                            break;
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let current_user_id = libtest_with::uzers::get_current_uid();
+                let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
+                    Some(user) => {
+                        let mut in_group = false;
+                        for group in user.groups().expect("user not found") {
+                            if in_group {
+                                break;
+                            }
+                            in_group |= group.name().to_string_lossy() == #group_name;
                         }
-                        in_group |= group.name().to_string_lossy() == #group_name;
+                        in_group
                     }
-                    in_group
+                    None => false,
+                };
+                if in_group {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because this case should run user in group {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
                 }
-                None => false,
-            };
-
-            if in_group {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because this case should run user in group {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let current_user_id = libtest_with::uzers::get_current_uid();
+                let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
+                    Some(user) => {
+                        let mut in_group = false;
+                        for group in user.groups().expect("user not found") {
+                            if in_group {
+                                break;
+                            }
+                            in_group |= group.name().to_string_lossy() == #group_name;
+                        }
+                        in_group
+                    }
+                    None => false,
+                };
+                if in_group {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because this case should run user in group {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let current_user_id = libtest_with::uzers::get_current_uid();
+                let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
+                    Some(user) => {
+                        let mut in_group = false;
+                        for group in user.groups().expect("user not found") {
+                            if in_group {
+                                break;
+                            }
+                            in_group |= group.name().to_string_lossy() == #group_name;
+                        }
+                        in_group
+                    }
+                    None => false,
+                };
+                if in_group {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because this case should run user in group {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1409,25 +1955,61 @@ pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let is_user = match libtest_with::uzers::get_current_username() {
-                Some(uname) => uname.to_string_lossy() == #user_name,
-                None => false,
-            };
-
-            if is_user {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because this case should run with user {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let is_user = match libtest_with::uzers::get_current_username() {
+                    Some(uname) => uname.to_string_lossy() == #user_name,
+                    None => false,
+                };
+                if is_user {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because this case should run with user {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
+                }
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let is_user = match libtest_with::uzers::get_current_username() {
+                    Some(uname) => uname.to_string_lossy() == #user_name,
+                    None => false,
+                };
+                if is_user {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because this case should run with user {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let is_user = match libtest_with::uzers::get_current_username() {
+                    Some(uname) => uname.to_string_lossy() == #user_name,
+                    None => false,
+                };
+                if is_user {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because this case should run with user {}",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1524,28 +2106,73 @@ pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-            );
-            let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
-                Ok(b) => b,
-                Err(_) => panic!("system memory size can not get"),
-            };
-            let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-            if  mem_size >= mem_size_limitation {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because the memory less than {}",
-                        libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+                );
+                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system memory size can not get"),
+                };
+                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                if  mem_size >= mem_size_limitation {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because the memory less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                }
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+                );
+                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system memory size can not get"),
+                };
+                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                if  mem_size >= mem_size_limitation {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because the memory less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+                );
+                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system memory size can not get"),
+                };
+                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                if  mem_size >= mem_size_limitation {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because the memory less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
-
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1589,28 +2216,73 @@ pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-            );
-            let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
-                Ok(b) => b,
-                Err(_) => panic!("system memory size can not get"),
-            };
-            let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-            if  mem_size >= mem_size_limitation {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because the memory less than {}",
-                        libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+                );
+                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system memory size can not get"),
+                };
+                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                if  mem_size >= mem_size_limitation {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because the memory less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                }
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+                );
+                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system memory size can not get"),
+                };
+                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                if  mem_size >= mem_size_limitation {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because the memory less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+                );
+                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system memory size can not get"),
+                };
+                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                if  mem_size >= mem_size_limitation {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because the memory less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
-
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1654,28 +2326,73 @@ pub fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStr
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-            );
-            let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
-                Ok(b) => b,
-                Err(_) => panic!("system memory size can not get"),
-            };
-            let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-            if  mem_size >= mem_size_limitation {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because the memory less than {}",
-                        libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+                );
+                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system memory size can not get"),
+                };
+                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                if  mem_size >= mem_size_limitation {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because the memory less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                }
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+                );
+                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system memory size can not get"),
+                };
+                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                if  mem_size >= mem_size_limitation {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because the memory less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+                );
+                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system memory size can not get"),
+                };
+                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                if  mem_size >= mem_size_limitation {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because the memory less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
-
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1772,28 +2489,73 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-            );
-            let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
-                Ok(b) => b,
-                Err(_) => panic!("system swap size can not get"),
-            };
-            let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
-            if  swap_size >= swap_size_limitation {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because the swap less than {}",
-                        libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+                );
+                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system swap size can not get"),
+                };
+                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                if  swap_size >= swap_size_limitation {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because the swap less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                }
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+                );
+                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system swap size can not get"),
+                };
+                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                if  swap_size >= swap_size_limitation {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because the swap less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+                );
+                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system swap size can not get"),
+                };
+                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                if  swap_size >= swap_size_limitation {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because the swap less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
-
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1837,28 +2599,73 @@ pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream 
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            let sys = libtest_with::sysinfo::System::new_with_specifics(
-                libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-            );
-            let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
-                Ok(b) => b,
-                Err(_) => panic!("system swap size can not get"),
-            };
-            let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
-            if  swap_size >= swap_size_limitation {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because the swap less than {}",
-                        libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+                );
+                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system swap size can not get"),
+                };
+                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                if swap_size >= swap_size_limitation {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because the swap less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                }
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+                );
+                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system swap size can not get"),
+                };
+                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                if swap_size >= swap_size_limitation {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because the swap less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let sys = libtest_with::sysinfo::System::new_with_specifics(
+                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+                );
+                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
+                    Ok(b) => b,
+                    Err(_) => panic!("system swap size can not get"),
+                };
+                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                if swap_size >= swap_size_limitation {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because the swap less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
-
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -1947,20 +2754,49 @@ pub fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            if libtest_with::num_cpus::get() >= #core_limitation {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because the cpu core less than {}",
-                        libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if libtest_with::num_cpus::get() >= #core_limitation {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because the cpu core less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                }
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if libtest_with::num_cpus::get() >= #core_limitation {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because the cpu core less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if libtest_with::num_cpus::get() >= #core_limitation {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because the cpu core less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
-
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -2052,20 +2888,49 @@ pub fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStre
         proc_macro2::Span::call_site(),
     );
 
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            if libtest_with::num_cpus::get_physical() >= #core_limitation {
-                #ident();
-                Ok(())
-            } else {
-                Err(format!("{}because the physical cpu core less than {}",
-                        libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if libtest_with::num_cpus::get_physical() >= #core_limitation {
+                    #ident().await;
+                    Ok(())
+                } else {
+                    Err(format!("{}because the physical cpu core less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                }
             }
-        }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if libtest_with::num_cpus::get_physical() >= #core_limitation {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(format!("{}because the physical cpu core less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if libtest_with::num_cpus::get_physical() >= #core_limitation {
+                    #ident();
+                    Ok(())
+                } else {
+                    Err(format!("{}because the physical cpu core less than {}",
+                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                }
+            }
+        },
+    };
 
-        #(#attrs)*
-        #vis #sig #block
-
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -2221,8 +3086,86 @@ pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream
         proc_macro2::Span::call_site(),
     );
 
-    if has_or_cond {
-        quote::quote! {
+    let check_fn = match (has_or_cond, &sig.asyncness, &sig.output) {
+        (true, Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                #(
+                    if libtest_with::which::which(#executables).is_ok() {
+                        #ident().await;
+                        return Ok(());
+                    }
+                )*
+                Err(format!("{}because none of executables can be found:\n{}\n",
+                    libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
+            }
+        },
+        (false, Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_executables = vec![];
+                #(
+                    if libtest_with::which::which(#executables).is_err() {
+                        missing_executables.push(#executables);
+                    }
+                )*
+                match missing_executables.len() {
+                    0 => {
+                        #ident().await;
+                        Ok(())
+                    },
+                    1 => Err(
+                        format!("{}because executable {} not found",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following executables not found:\n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (true, Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                #(
+                    if libtest_with::which::which(#executables).is_ok() {
+                        if let Err(e) = #ident().await {
+                            return Err(format!("{e:?}").into());
+                        } else {
+                            return Ok(());
+                        }
+                    }
+                )*
+                Err(format!("{}because none of executables can be found:\n{}\n",
+                    libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
+            }
+        },
+        (false, Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut missing_executables = vec![];
+                #(
+                    if libtest_with::which::which(#executables).is_err() {
+                        missing_executables.push(#executables);
+                    }
+                )*
+                match missing_executables.len() {
+                    0 => {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                    },
+                    1 => Err(
+                        format!("{}because executable {} not found",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
+                    ).into()),
+                    _ => Err(
+                        format!("{}because following executables not found:\n{}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
+                    ).into()),
+                }
+            }
+        },
+        (true, None, _) => quote::quote! {
             fn #check_ident() -> Result<(), libtest_with::Failed> {
                 #(
                     if libtest_with::which::which(#executables).is_ok() {
@@ -2233,14 +3176,8 @@ pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream
                 Err(format!("{}because none of executables can be found:\n{}\n",
                     libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
             }
-
-            #(#attrs)*
-            #vis #sig #block
-
-        }
-        .into()
-    } else {
-        quote::quote! {
+        },
+        (false, None, _) => quote::quote! {
             fn #check_ident() -> Result<(), libtest_with::Failed> {
                 let mut missing_executables = vec![];
                 #(
@@ -2263,13 +3200,15 @@ pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream
                     ).into()),
                 }
             }
+        },
+    };
 
+    quote::quote! {
+            #check_fn
             #(#attrs)*
             #vis #sig #block
-
-        }
-        .into()
     }
+    .into()
 }
 
 /// Provide a test runner and test on each module
@@ -2320,6 +3259,37 @@ pub fn runner(input: TokenStream) -> TokenStream {
                 }
             )*
             libtest_with::run(&args, no_env_tests).exit();
+        }
+    }
+    .into()
+}
+
+#[cfg(not(feature = "runtime"))]
+#[proc_macro]
+pub fn tokio_runner(_input: TokenStream) -> TokenStream {
+    panic!("should be used with `runtime` feature, and add `test-with-async` in your project")
+}
+#[cfg(feature = "runtime")]
+#[proc_macro]
+pub fn tokio_runner(input: TokenStream) -> TokenStream {
+    let input_str = input.to_string();
+    let mod_names: Vec<syn::Ident> = input_str
+        .split(",")
+        .map(|s| syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
+        .collect();
+    quote::quote! {
+        fn main() {
+            #[cfg(not(feature = "test-with-async"))]
+            panic!("Please add `test-with-async` feature in your project and run with it");
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async {
+                    #(
+                        #mod_names::_runtime_tests().await;
+                    )*
+                })
         }
     }
     .into()
@@ -2503,11 +3473,13 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     )
                 })
                 .collect();
+            let total = check_names.len();
             if let Some(test_env_type) = test_env_type {
                 quote::quote! {
                     #(#attrs)*
                     #vis #mod_token #ident {
                         use super::*;
+                        #[cfg(not(feature = "test-with-async"))]
                         pub fn _runtime_tests() -> (Option<#test_env_type>, Vec<libtest_with::Trial>) {
                             use libtest_with::Trial;
                             (
@@ -2516,6 +3488,41 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                     #(Trial::test(#test_names, #check_names),)*
                                 ]
                             )
+                        }
+                        #[cfg(feature = "test-with-async")]
+                        pub async fn _runtime_tests() {
+                            let env = #test_env_type::default();
+                            let mut failed = 0;
+                            let mut passed = 0;
+                            let mut ignored = 0;
+                            println!("running {} tests of {}\n", #total, stringify!(#ident));
+                            #(
+                                print!("test {}::{} ... ", stringify!(#ident), #test_names);
+                                if let Err(e) = #check_names().await {
+                                    if let Some(msg) = e.message() {
+                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
+                                            println!("ignored, {}", msg[12..].to_string());
+                                            ignored += 1;
+                                        } else {
+                                            println!("FAILED, {msg}");
+                                            failed += 1;
+                                        }
+                                    } else {
+                                        println!("FAILED");
+                                        failed += 1;
+                                    }
+                                } else {
+                                    println!("ok");
+                                    passed += 1;
+                                }
+                            )*
+                            drop(env);
+                            if failed > 0 {
+                                println!("\ntest result: failed. {passed} passed; {failed} failed; {ignored} ignored;\n");
+                                std::process::exit(1);
+                            } else {
+                                println!("\ntest result: ok. {passed} passed; {failed} failed; {ignored} ignored;\n");
+                            }
                         }
                         #(#content)*
                     }
@@ -2526,6 +3533,7 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     #(#attrs)*
                     #vis #mod_token #ident {
                         use super::*;
+                        #[cfg(not(feature = "test-with-async"))]
                         pub fn _runtime_tests() -> (Option<()>, Vec<libtest_with::Trial>) {
                             use libtest_with::Trial;
                             (
@@ -2534,6 +3542,39 @@ pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                     #(Trial::test(#test_names, #check_names),)*
                                 ]
                             )
+                        }
+                        #[cfg(feature = "test-with-async")]
+                        pub async fn _runtime_tests() {
+                            let mut failed = 0;
+                            let mut passed = 0;
+                            let mut ignored = 0;
+                            println!("running {} tests of {}\n", #total, stringify!(#ident));
+                            #(
+                                print!("test {}::{} ... ", stringify!(#ident), #test_names);
+                                if let Err(e) = #check_names().await {
+                                    if let Some(msg) = e.message() {
+                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
+                                            println!("ignored, {}", msg[12..].to_string());
+                                            ignored += 1;
+                                        } else {
+                                            println!("FAILED, {msg}");
+                                            failed += 1;
+                                        }
+                                    } else {
+                                        println!("FAILED");
+                                        failed += 1;
+                                    }
+                                } else {
+                                    println!("ok");
+                                    passed += 1;
+                                }
+                            )*
+                            if failed > 0 {
+                                println!("\ntest result: failed. {passed} passed; {failed} failed; {ignored} ignored;\n");
+                                std::process::exit(1);
+                            } else {
+                                println!("\ntest result: ok. {passed} passed; {failed} failed; {ignored} ignored;\n");
+                            }
                         }
                         #(#content)*
                     }
@@ -2588,18 +3629,47 @@ pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream 
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
-            if let Some(msg) = #ignore_function() {
-                Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
-            } else {
-                #ident();
-                Ok(())
-            }
-        }
 
-        #(#attrs)*
-        #vis #sig #block
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if let Some(msg) = #ignore_function() {
+                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                } else {
+                    #ident().await;
+                    Ok(())
+                }
+            }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if let Some(msg) = #ignore_function() {
+                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                } else {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
+                    }
+                }
+            }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                if let Some(msg) = #ignore_function() {
+                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                } else {
+                    #ident();
+                    Ok(())
+                }
+            }
+        },
+    };
+
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }
@@ -2986,7 +4056,7 @@ pub fn timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
 }
 
 #[cfg(feature = "timezone")]
-fn check_timezone(attr_str: &String) -> (bool, Vec<&str>) {
+fn check_timezone(attr_str: &str) -> (bool, Vec<&str>) {
     let mut incorrect_tzs = vec![];
     let mut match_tz = false;
     let current_tz = chrono::Local::now().offset().local_minus_utc() / 60;
@@ -3011,7 +4081,7 @@ fn check_timezone(attr_str: &String) -> (bool, Vec<&str>) {
             "PKT" => Ok(5 * 60),
             "EAT" | "EEST" | "IDT" | "MSK" => Ok(3 * 60),
             "CAT" | "EET" | "CEST" | "SAST" => Ok(2 * 60),
-            "CET" | "WAT" | "WEST" | "BST" => Ok(1 * 60),
+            "CET" | "WAT" | "WEST" | "BST" => Ok(60),
             "UTC" | "GMT" | "WET" => Ok(0),
             "NDT" | "-2.5" => Ok(-2 * 60 - 30),
             "NST" | "-3.5" => Ok(-3 * 60 - 30),
@@ -3100,45 +4170,125 @@ pub fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
         &format!("_check_{}", ident.to_string()),
         proc_macro2::Span::call_site(),
     );
-    quote::quote! {
-        fn #check_ident() -> Result<(), libtest_with::Failed> {
 
-            let mut incorrect_tzs = vec![];
-            let mut match_tz = false;
-            let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
-            for tz in #attr_str.split(',') {
-                if let Ok(parsed_tz) = tz.parse::<i32>() {
-                    match_tz |= current_tz == parsed_tz;
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut incorrect_tzs = vec![];
+                let mut match_tz = false;
+                let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
+                for tz in #attr_str.split(',') {
+                    if let Ok(parsed_tz) = tz.parse::<i32>() {
+                        match_tz |= current_tz == parsed_tz;
+                    } else {
+                        incorrect_tzs.push(tz);
+                    }
+                }
+
+                if match_tz && incorrect_tzs.is_empty() {
+                        #ident().await;
+                        Ok(())
+                } else if incorrect_tzs.len() == 1 {
+                    Err(
+                        format!("{}because timezone {} is incorrect",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
+                    ).into())
+                } else if incorrect_tzs.len() > 1 {
+                    Err(
+                        format!("{}because following timezones are incorrect:\n{:?}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
+                    ).into())
                 } else {
-                    incorrect_tzs.push(tz);
+                    Err(
+                        format!(
+                        "{}because the test case not run in following timezone:\n{}\n",
+                        libtest_with::RUNTIME_IGNORE_PREFIX,
+                        #attr_str
+                    ).into())
                 }
             }
+        },
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
+            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut incorrect_tzs = vec![];
+                let mut match_tz = false;
+                let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
+                for tz in #attr_str.split(',') {
+                    if let Ok(parsed_tz) = tz.parse::<i32>() {
+                        match_tz |= current_tz == parsed_tz;
+                    } else {
+                        incorrect_tzs.push(tz);
+                    }
+                }
 
-            if match_tz && incorrect_tzs.is_empty() {
-                    #ident();
-                    Ok(())
-            } else if incorrect_tzs.len() == 1 {
-                Err(
-                    format!("{}because timezone {} is incorrect",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
-                ).into())
-            } else if incorrect_tzs.len() > 1 {
-                Err(
-                    format!("{}because following timezones are incorrect:\n{:?}\n",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
-                ).into())
-            } else {
-                Err(
-                    format!(
-                    "{}because the test case not run in following timezone:\n{}\n",
-                    libtest_with::RUNTIME_IGNORE_PREFIX,
-                    #attr_str
-                ).into())
+                if match_tz && incorrect_tzs.is_empty() {
+                        if let Err(e) = #ident().await {
+                            Err(format!("{e:?}").into())
+                        } else {
+                            Ok(())
+                        }
+                } else if incorrect_tzs.len() == 1 {
+                    Err(
+                        format!("{}because timezone {} is incorrect",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
+                    ).into())
+                } else if incorrect_tzs.len() > 1 {
+                    Err(
+                        format!("{}because following timezones are incorrect:\n{:?}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
+                    ).into())
+                } else {
+                    Err(
+                        format!(
+                        "{}because the test case not run in following timezone:\n{}\n",
+                        libtest_with::RUNTIME_IGNORE_PREFIX,
+                        #attr_str
+                    ).into())
+                }
             }
-        }
+        },
+        (None, _) => quote::quote! {
+            fn #check_ident() -> Result<(), libtest_with::Failed> {
+                let mut incorrect_tzs = vec![];
+                let mut match_tz = false;
+                let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
+                for tz in #attr_str.split(',') {
+                    if let Ok(parsed_tz) = tz.parse::<i32>() {
+                        match_tz |= current_tz == parsed_tz;
+                    } else {
+                        incorrect_tzs.push(tz);
+                    }
+                }
 
-        #(#attrs)*
-        #vis #sig #block
+                if match_tz && incorrect_tzs.is_empty() {
+                        #ident();
+                        Ok(())
+                } else if incorrect_tzs.len() == 1 {
+                    Err(
+                        format!("{}because timezone {} is incorrect",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
+                    ).into())
+                } else if incorrect_tzs.len() > 1 {
+                    Err(
+                        format!("{}because following timezones are incorrect:\n{:?}\n",
+                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
+                    ).into())
+                } else {
+                    Err(
+                        format!(
+                        "{}because the test case not run in following timezone:\n{}\n",
+                        libtest_with::RUNTIME_IGNORE_PREFIX,
+                        #attr_str
+                    ).into())
+                }
+            }
+        },
+    };
+
+    quote::quote! {
+            #check_fn
+            #(#attrs)*
+            #vis #sig #block
     }
     .into()
 }

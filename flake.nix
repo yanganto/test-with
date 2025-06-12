@@ -48,6 +48,7 @@
           cargo run --example mock
           cargo run --example mock2
           cargo run --example mix
+          cargo run --example tokio --features=test-with-async
         '';
       in
       with pkgs;

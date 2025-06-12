@@ -5,4 +5,8 @@ edition = "2021"
 
 [dependencies]
 test-with = { path = "../../", features = ["runtime"] }
-libtest-with = { version = "0.8.1-7", features = ["net", "resource", "user", "executable", "timezone"]}
+libtest-with = { version = "0.8.1-7", features = ["net", "resource", "user", "executable", "timezone"] }
+tokio = "1.45.1"
+
+[features]
+test-with-async = []
