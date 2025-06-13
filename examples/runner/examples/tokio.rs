@@ -9,7 +9,8 @@ test_with::tokio_runner!(
     resource_tests,
     custom_mod,
     timezone_tests,
-    net_with_mock
+    net_with_mock,
+    sync_mixed
 );
 
 #[test_with::module]
@@ -189,6 +190,27 @@ mod net_with_mock {
 
     #[test_with::runtime_http(127.0.0.1:9000)]
     async fn test_will_ignore() {
+        assert!(false);
+    }
+}
+
+/// The testcase mixed with async and sync
+#[test_with::module]
+mod sync_mixed {
+    #[test_with::runtime_env(PWD)]
+    async fn test_tokio_runtime() {
+        assert!(true);
+    }
+    #[test_with::runtime_env(NOTHING)]
+    async fn test_tokio_runtime_ignore() {
+        assert!(false);
+    }
+    #[test_with::runtime_env(PWD)]
+    fn test_sync() {
+        assert!(true);
+    }
+    #[test_with::runtime_env(NOTHING)]
+    fn test_sync_ignore() {
         assert!(false);
     }
 }
