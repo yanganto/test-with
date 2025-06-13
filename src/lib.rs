@@ -49,27 +49,33 @@
 //! }
 //! ```
 
-use std::{fs::metadata, path::Path};
-
-#[cfg(feature = "icmp")]
-use std::net::IpAddr;
-use std::net::TcpStream;
-
 use proc_macro::TokenStream;
 use proc_macro_error2::abort_call_site;
 use proc_macro_error2::proc_macro_error;
-#[cfg(feature = "runtime")]
-use syn::ReturnType;
 use syn::{parse_macro_input, ItemFn, ItemMod};
 
 #[cfg(feature = "runtime")]
-use syn::{Item, ItemStruct, ItemType};
+use syn::ReturnType;
 
+use crate::utils::{fn_macro, is_module, lock_macro, mod_macro};
+
+mod env;
 #[cfg(feature = "executable")]
-use which::which;
-
-use crate::utils::{fn_macro, is_module, lock_macro, mod_macro, sanitize_env_vars_attr};
-
+mod executable;
+mod file;
+#[cfg(feature = "http")]
+mod http;
+#[cfg(feature = "icmp")]
+mod icmp;
+#[cfg(feature = "resource")]
+mod resource;
+#[cfg(feature = "runtime")]
+mod runtime;
+mod socket;
+#[cfg(feature = "timezone")]
+mod timezone;
+#[cfg(feature = "user")]
+mod user;
 mod utils;
 
 /// Run test case when the environment variable is set.
@@ -118,41 +124,15 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_env_condition,
+            env::check_env_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_env_condition,
+            env::check_env_condition,
         )
     }
-}
-
-fn check_env_condition(attr_str: String) -> (bool, String) {
-    let var_names = sanitize_env_vars_attr(&attr_str);
-
-    // Check if the environment variables are set
-    let mut missing_vars = vec![];
-    for name in var_names {
-        if std::env::var(name).is_err() {
-            missing_vars.push(name.to_string());
-        }
-    }
-
-    // Generate ignore message
-    let ignore_msg = if missing_vars.is_empty() {
-        String::new()
-    } else if missing_vars.len() == 1 {
-        format!("because variable {} not found", missing_vars[0])
-    } else {
-        format!(
-            "because following variables not found:\n{}\n",
-            missing_vars.join(", ")
-        )
-    };
-
-    (missing_vars.is_empty(), ignore_msg)
 }
 
 /// Run test case when the example running and the environment variable is set.
@@ -177,104 +157,7 @@ pub fn runtime_env(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let var_names: Vec<&str> = attr_str.split(',').collect();
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_vars = vec![];
-                #(
-                    if std::env::var(#var_names).is_err() {
-                        missing_vars.push(#var_names);
-                    }
-                )*
-                match missing_vars.len() {
-                    0 => {
-                        let _ = #ident().await;
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because variable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_vars = vec![];
-                #(
-                    if std::env::var(#var_names).is_err() {
-                        missing_vars.push(#var_names);
-                    }
-                )*
-                match missing_vars.len() {
-                    0 => {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                    },
-                    1 => Err(
-                        format!("{}because variable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_vars = vec![];
-                #(
-                    if std::env::var(#var_names).is_err() {
-                        missing_vars.push(#var_names);
-                    }
-                )*
-                match missing_vars.len() {
-                    0 => {
-                        #ident();
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because variable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
-                    ).into()),
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    env::runtime_env(attr, stream)
 }
 
 /// Ignore test case when the environment variable is set.
@@ -296,41 +179,15 @@ pub fn no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_no_env_condition,
+            env::check_no_env_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_no_env_condition,
+            env::check_no_env_condition,
         )
     }
-}
-
-fn check_no_env_condition(attr_str: String) -> (bool, String) {
-    let var_names = sanitize_env_vars_attr(&attr_str);
-
-    // Check if the environment variables are set
-    let mut found_vars = vec![];
-    for name in var_names {
-        if std::env::var(name).is_ok() {
-            found_vars.push(name.to_string());
-        }
-    }
-
-    // Generate ignore message
-    let ignore_msg = if found_vars.is_empty() {
-        String::new()
-    } else if found_vars.len() == 1 {
-        format!("because variable {} was found", found_vars[0])
-    } else {
-        format!(
-            "because following variables were found:\n{}\n",
-            found_vars.join(", ")
-        )
-    };
-
-    (found_vars.is_empty(), ignore_msg)
 }
 
 /// Ignore test case when the example running and the environment variable is set.
@@ -355,104 +212,7 @@ pub fn runtime_no_env(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let var_names: Vec<&str> = attr_str.split(',').collect();
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut should_no_exist_vars = vec![];
-                #(
-                    if std::env::var(#var_names).is_ok() {
-                        should_no_exist_vars.push(#var_names);
-                    }
-                )*
-                match should_no_exist_vars.len() {
-                    0 => {
-                        #ident().await;
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because variable {} found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut should_no_exist_vars = vec![];
-                #(
-                    if std::env::var(#var_names).is_ok() {
-                        should_no_exist_vars.push(#var_names);
-                    }
-                )*
-                match should_no_exist_vars.len() {
-                    0 => {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                    },
-                    1 => Err(
-                        format!("{}because variable {} found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut should_no_exist_vars = vec![];
-                #(
-                    if std::env::var(#var_names).is_ok() {
-                        should_no_exist_vars.push(#var_names);
-                    }
-                )*
-                match should_no_exist_vars.len() {
-                    0 => {
-                        #ident();
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because variable {} found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
-                    ).into()),
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    env::runtime_no_env(attr, stream)
 }
 
 /// Run test case when the file exist.
@@ -489,34 +249,15 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_file_condition,
+            file::check_file_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_file_condition,
+            file::check_file_condition,
         )
     }
-}
-
-fn check_file_condition(attr_str: String) -> (bool, String) {
-    let files: Vec<&str> = attr_str.split(',').collect();
-    let mut missing_files = vec![];
-    for file in files.iter() {
-        if !Path::new(file.trim_matches('"')).is_file() {
-            missing_files.push(file.to_string());
-        }
-    }
-    let ignore_msg = if missing_files.len() == 1 {
-        format!("because file not found: {}", missing_files[0])
-    } else {
-        format!(
-            "because following files not found: \n{}\n",
-            missing_files.join("\n")
-        )
-    };
-    (missing_files.is_empty(), ignore_msg)
 }
 
 /// Run test case when the example running and the file exist.
@@ -541,106 +282,7 @@ pub fn runtime_file(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let files: Vec<&str> = attr_str.split(',').collect();
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_files = vec![];
-                #(
-                    if !std::path::Path::new(#files.trim_matches('"')).is_file() {
-                        missing_files.push(#files);
-                    }
-                )*
-
-                match missing_files.len() {
-                    0 => {
-                        #ident().await;
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because file not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following files not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_files = vec![];
-                #(
-                    if !std::path::Path::new(#files.trim_matches('"')).is_file() {
-                        missing_files.push(#files);
-                    }
-                )*
-
-                match missing_files.len() {
-                    0 => {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                    },
-                    1 => Err(
-                        format!("{}because file not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following files not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_files = vec![];
-                #(
-                    if !std::path::Path::new(#files.trim_matches('"')).is_file() {
-                        missing_files.push(#files);
-                    }
-                )*
-
-                match missing_files.len() {
-                    0 => {
-                        #ident();
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because file not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following files not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
-                    ).into()),
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    file::runtime_file(attr, stream)
 }
 
 /// Run test case when the path(file or folder) exist.
@@ -677,34 +319,15 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_path_condition,
+            file::check_path_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_path_condition,
+            file::check_path_condition,
         )
     }
-}
-
-fn check_path_condition(attr_str: String) -> (bool, String) {
-    let paths: Vec<&str> = attr_str.split(',').collect();
-    let mut missing_paths = vec![];
-    for path in paths.iter() {
-        if metadata(path.trim_matches('"')).is_err() {
-            missing_paths.push(path.to_string());
-        }
-    }
-    let ignore_msg = if missing_paths.len() == 1 {
-        format!("because path not found: {}", missing_paths[0])
-    } else {
-        format!(
-            "because following paths not found: \n{}\n",
-            missing_paths.join("\n")
-        )
-    };
-    (missing_paths.is_empty(), ignore_msg)
 }
 
 /// Run test case when the example running and the path(file or folder) exist.
@@ -729,107 +352,7 @@ pub fn runtime_path(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let paths: Vec<&str> = attr_str.split(',').collect();
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_paths = vec![];
-                #(
-                    if std::fs::metadata(#paths.trim_matches('"')).is_err() {
-                        missing_paths.push(#paths.to_string());
-                    }
-                )*
-
-                match missing_paths.len() {
-                    0 => {
-                        #ident().await;
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because path not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following paths not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_paths = vec![];
-                #(
-                    if std::fs::metadata(#paths.trim_matches('"')).is_err() {
-                        missing_paths.push(#paths.to_string());
-                    }
-                )*
-
-                match missing_paths.len() {
-                    0 => {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                    },
-                    1 => Err(
-                        format!("{}because path not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following paths not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_paths = vec![];
-                #(
-                    if std::fs::metadata(#paths.trim_matches('"')).is_err() {
-                        missing_paths.push(#paths.to_string());
-                    }
-                )*
-
-                match missing_paths.len() {
-                    0 => {
-                        #ident();
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because path not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following paths not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
-                    ).into()),
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    file::runtime_path(attr, stream)
 }
 
 /// Run test case when the http service exist.
@@ -860,36 +383,15 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_http_condition,
+            http::check_http_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_http_condition,
+            http::check_http_condition,
         )
     }
-}
-
-#[cfg(feature = "http")]
-fn check_http_condition(attr_str: String) -> (bool, String) {
-    let links: Vec<&str> = attr_str.split(',').collect();
-    let mut missing_links = vec![];
-    let client = reqwest::blocking::Client::new();
-    for link in links.iter() {
-        if client.head(&format!("http://{}", link)).send().is_err() {
-            missing_links.push(format!("http://{link:}"));
-        }
-    }
-    let ignore_msg = if missing_links.len() == 1 {
-        format!("because {} not response", missing_links[0])
-    } else {
-        format!(
-            "because following links not response: \n{}\n",
-            missing_links.join("\n")
-        )
-    };
-    (missing_links.is_empty(), ignore_msg)
 }
 
 /// Run test case when the example running and the http service exist.
@@ -914,107 +416,7 @@ pub fn runtime_http(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let links: Vec<&str> = attr_str.split(',').collect();
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_links = vec![];
-                let client = libtest_with::reqwest::Client::new();
-                #(
-                    if client.head(&format!("http://{}", #links)).send().await.is_err() {
-                        missing_links.push(format!("http://{}", #links));
-                    }
-                )*
-                match missing_links.len() {
-                    0 => {
-                        #ident().await;
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_links = vec![];
-                let client = libtest_with::reqwest::Client::new();
-                #(
-                    if client.head(&format!("http://{}", #links)).send().await.is_err() {
-                        missing_links.push(format!("http://{}", #links));
-                    }
-                )*
-                match missing_links.len() {
-                    0 => {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-
-                let mut missing_links = vec![];
-                let client = libtest_with::reqwest::blocking::Client::new();
-                #(
-                    if client.head(&format!("http://{}", #links)).send().is_err() {
-                        missing_links.push(format!("http://{}", #links));
-                    }
-                )*
-                match missing_links.len() {
-                    0 => {
-                        #ident();
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    http::runtime_http(attr, stream)
 }
 
 /// Run test case when the https service exist.
@@ -1045,36 +447,15 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_https_condition,
+            http::check_https_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_https_condition,
+            http::check_https_condition,
         )
     }
-}
-
-#[cfg(feature = "http")]
-fn check_https_condition(attr_str: String) -> (bool, String) {
-    let links: Vec<&str> = attr_str.split(',').collect();
-    let mut missing_links = vec![];
-    let client = reqwest::blocking::Client::new();
-    for link in links.iter() {
-        if client.head(&format!("https://{}", link)).send().is_err() {
-            missing_links.push(format!("https://{link:}"));
-        }
-    }
-    let ignore_msg = if missing_links.len() == 1 {
-        format!("because {} not response", missing_links[0])
-    } else {
-        format!(
-            "because following links not response: \n{}\n",
-            missing_links.join("\n")
-        )
-    };
-    (missing_links.is_empty(), ignore_msg)
 }
 
 /// Run test case when the example running and the http service exist.
@@ -1088,7 +469,7 @@ fn check_https_condition(attr_str: String) -> (bool, String) {
 ///         assert!(true);
 ///     }
 /// }
-#[cfg(not(feature = "runtime"))]
+#[cfg(all(not(feature = "runtime"), feature = "http"))]
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_https(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
@@ -1099,107 +480,7 @@ pub fn runtime_https(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let links: Vec<&str> = attr_str.split(',').collect();
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_links = vec![];
-                let client = libtest_with::reqwest::Client::new();
-                #(
-                    if client.head(&format!("https://{}", #links)).send().await.is_err() {
-                        missing_links.push(format!("https://{}", #links));
-                    }
-                )*
-                match missing_links.len() {
-                    0 => {
-                        #ident().await;
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_links = vec![];
-                let client = libtest_with::reqwest::Client::new();
-                #(
-                    if client.head(&format!("https://{}", #links)).send().await.is_err() {
-                        missing_links.push(format!("https://{}", #links));
-                    }
-                )*
-                match missing_links.len() {
-                    0 => {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_links = vec![];
-                let client = libtest_with::reqwest::blocking::Client::new();
-                #(
-                    if client.head(&format!("https://{}", #links)).send().is_err() {
-                        missing_links.push(format!("https://{}", #links));
-                    }
-                )*
-                match missing_links.len() {
-                    0 => {
-                        #ident();
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    http::runtime_https(attr, stream)
 }
 
 /// Run test case when the server online.
@@ -1232,39 +513,15 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_icmp_condition,
+            icmp::check_icmp_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_icmp_condition,
+            icmp::check_icmp_condition,
         )
     }
-}
-
-#[cfg(feature = "icmp")]
-fn check_icmp_condition(attr_str: String) -> (bool, String) {
-    let ips: Vec<&str> = attr_str.split(',').collect();
-    let mut missing_ips = vec![];
-    for ip in ips.iter() {
-        if let Ok(addr) = ip.parse::<IpAddr>() {
-            if ping::ping(addr, None, None, None, None, None).is_err() {
-                missing_ips.push(ip.to_string());
-            }
-        } else {
-            abort_call_site!("ip address malformat")
-        }
-    }
-    let ignore_msg = if missing_ips.len() == 1 {
-        format!("because ip {} not response", missing_ips[0])
-    } else {
-        format!(
-            "because following ip not response: \n{}\n",
-            missing_ips.join(", ")
-        )
-    };
-    (missing_ips.is_empty(), ignore_msg)
 }
 
 /// Run test case when the example running and the server online.
@@ -1280,7 +537,7 @@ fn check_icmp_condition(attr_str: String) -> (bool, String) {
 ///         panic!("should be ignored with non existing host")
 ///     }
 /// }
-#[cfg(not(feature = "runtime"))]
+#[cfg(all(not(feature = "runtime"), feature = "icmp"))]
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_icmp(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
@@ -1291,105 +548,7 @@ pub fn runtime_icmp(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let ips: Vec<&str> = attr_str.split(',').collect();
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_ips = vec![];
-                #(
-                    if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
-                        missing_ips.push(#ips);
-                    }
-                )*
-                match missing_ips.len() {
-                    0 => {
-                        #ident().await;
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following ips not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_ips = vec![];
-                #(
-                    if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
-                        missing_ips.push(#ips);
-                    }
-                )*
-                match missing_ips.len() {
-                    0 => {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following ips not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_ips = vec![];
-                #(
-                    if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
-                        missing_ips.push(#ips);
-                    }
-                )*
-                match missing_ips.len() {
-                    0 => {
-                        #ident();
-                        Ok(())
-                    }
-                    ,
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following ips not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
-                    ).into()),
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    icmp::runtime_icmp(attr, stream)
 }
 
 /// Run test case when socket connected
@@ -1420,34 +579,15 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_tcp_condition,
+            socket::check_tcp_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_tcp_condition,
+            socket::check_tcp_condition,
         )
     }
-}
-
-fn check_tcp_condition(attr_str: String) -> (bool, String) {
-    let sockets: Vec<&str> = attr_str.split(',').collect();
-    let mut missing_sockets = vec![];
-    for socket in sockets.iter() {
-        if TcpStream::connect(socket).is_err() {
-            missing_sockets.push(socket.to_string());
-        }
-    }
-    let ignore_msg = if missing_sockets.len() == 1 {
-        format!("because fail to connect socket {}", missing_sockets[0])
-    } else {
-        format!(
-            "because follow sockets can not connect\n{}\n",
-            missing_sockets.join(", ")
-        )
-    };
-    (missing_sockets.is_empty(), ignore_msg)
 }
 
 /// Run test case when the example running and socket connected
@@ -1473,104 +613,7 @@ pub fn runtime_tcp(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let sockets: Vec<&str> = attr_str.split(',').collect();
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_sockets = vec![];
-                #(
-                    if std::net::TcpStream::connect(#sockets).is_err() {
-                        missing_sockets.push(#sockets);
-                    }
-                )*
-                match missing_sockets.len() {
-                    0 => {
-                        #ident().await;
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following sockets not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_sockets = vec![];
-                #(
-                    if std::net::TcpStream::connect(#sockets).is_err() {
-                        missing_sockets.push(#sockets);
-                    }
-                )*
-                match missing_sockets.len() {
-                    0 => {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following sockets not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets.join(", ")
-                    ).into()),
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_sockets = vec![];
-                #(
-                    if std::net::TcpStream::connect(#sockets).is_err() {
-                        missing_sockets.push(#sockets);
-                    }
-                )*
-                match missing_sockets.len() {
-                    0 => {
-                        #ident();
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following sockets not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_sockets.join(", ")
-                    ).into()),
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    socket::runtime_tcp(attr, stream)
 }
 
 /// Run test case when runner is root
@@ -1589,30 +632,21 @@ pub fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 #[proc_macro_error]
-#[cfg(all(feature = "user", not(target_os = "windows")))]
+#[cfg(all(feature = "user"))]
 pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_root_condition,
+            user::check_root_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_root_condition,
+            user::check_root_condition,
         )
     }
-}
-
-#[cfg(all(feature = "user", not(target_os = "windows")))]
-fn check_root_condition(_attr_str: String) -> (bool, String) {
-    let current_user_id = uzers::get_current_uid();
-    (
-        current_user_id == 0,
-        "because this case should run with root".into(),
-    )
 }
 
 /// Run test case when runner is root
@@ -1633,64 +667,11 @@ fn check_root_condition(_attr_str: String) -> (bool, String) {
 pub fn runtime_root(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
-#[cfg(all(feature = "runtime", feature = "user", not(target_os = "windows")))]
+#[cfg(all(feature = "runtime", feature = "user"))]
 #[proc_macro_attribute]
 #[proc_macro_error]
-pub fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if 0 == libtest_with::uzers::get_current_uid() {
-                    #ident().await;
-                    Ok(())
-                } else {
-                    Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if 0 == libtest_with::uzers::get_current_uid() {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if 0 == libtest_with::uzers::get_current_uid() {
-                    #ident();
-                    Ok(())
-                } else {
-                    Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+pub fn runtime_root(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    user::runtime_root(attr, stream)
 }
 
 /// Run test case when runner in group
@@ -1709,45 +690,21 @@ pub fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 #[proc_macro_error]
-#[cfg(all(feature = "user", not(target_os = "windows")))]
+#[cfg(all(feature = "user"))]
 pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_group_condition,
+            user::check_group_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_group_condition,
+            user::check_group_condition,
         )
     }
-}
-
-#[cfg(feature = "user")]
-#[cfg(all(feature = "user", not(target_os = "windows")))]
-fn check_group_condition(group_name: String) -> (bool, String) {
-    let current_user_id = uzers::get_current_uid();
-
-    let in_group = match uzers::get_user_by_uid(current_user_id) {
-        Some(user) => {
-            let mut in_group = false;
-            for group in user.groups().expect("user not found") {
-                if in_group {
-                    break;
-                }
-                in_group |= group.name().to_string_lossy() == group_name;
-            }
-            in_group
-        }
-        None => false,
-    };
-    (
-        in_group,
-        format!("because this case should run user in group {}", group_name),
-    )
 }
 
 /// Run test case when runner in group
@@ -1768,110 +725,11 @@ fn check_group_condition(group_name: String) -> (bool, String) {
 pub fn runtime_group(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
-#[cfg(all(feature = "runtime", feature = "user", not(target_os = "windows")))]
+#[cfg(all(feature = "runtime", feature = "user"))]
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let group_name = attr.to_string().replace(' ', "");
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let current_user_id = libtest_with::uzers::get_current_uid();
-                let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
-                    Some(user) => {
-                        let mut in_group = false;
-                        for group in user.groups().expect("user not found") {
-                            if in_group {
-                                break;
-                            }
-                            in_group |= group.name().to_string_lossy() == #group_name;
-                        }
-                        in_group
-                    }
-                    None => false,
-                };
-                if in_group {
-                    #ident().await;
-                    Ok(())
-                } else {
-                    Err(format!("{}because this case should run user in group {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let current_user_id = libtest_with::uzers::get_current_uid();
-                let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
-                    Some(user) => {
-                        let mut in_group = false;
-                        for group in user.groups().expect("user not found") {
-                            if in_group {
-                                break;
-                            }
-                            in_group |= group.name().to_string_lossy() == #group_name;
-                        }
-                        in_group
-                    }
-                    None => false,
-                };
-                if in_group {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(format!("{}because this case should run user in group {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let current_user_id = libtest_with::uzers::get_current_uid();
-                let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
-                    Some(user) => {
-                        let mut in_group = false;
-                        for group in user.groups().expect("user not found") {
-                            if in_group {
-                                break;
-                            }
-                            in_group |= group.name().to_string_lossy() == #group_name;
-                        }
-                        in_group
-                    }
-                    None => false,
-                };
-                if in_group {
-                    #ident();
-                    Ok(())
-                } else {
-                    Err(format!("{}because this case should run user in group {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    user::runtime_group(attr, stream)
 }
 
 /// Run test case when runner is specific user
@@ -1896,28 +754,15 @@ pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_user_condition,
+            user::check_user_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_user_condition,
+            user::check_user_condition,
         )
     }
-}
-
-#[cfg(feature = "user")]
-#[cfg(all(feature = "user", not(target_os = "windows")))]
-fn check_user_condition(user_name: String) -> (bool, String) {
-    let is_user = match uzers::get_current_username() {
-        Some(uname) => uname.to_string_lossy() == user_name,
-        None => false,
-    };
-    (
-        is_user,
-        format!("because this case should run with user {}", user_name),
-    )
 }
 
 /// Run test case when runner is specific user
@@ -1938,80 +783,11 @@ fn check_user_condition(user_name: String) -> (bool, String) {
 pub fn runtime_user(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
-#[cfg(all(feature = "runtime", feature = "user", not(target_os = "windows")))]
+#[cfg(all(feature = "runtime", feature = "user"))]
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let user_name = attr.to_string().replace(' ', "");
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let is_user = match libtest_with::uzers::get_current_username() {
-                    Some(uname) => uname.to_string_lossy() == #user_name,
-                    None => false,
-                };
-                if is_user {
-                    #ident().await;
-                    Ok(())
-                } else {
-                    Err(format!("{}because this case should run with user {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let is_user = match libtest_with::uzers::get_current_username() {
-                    Some(uname) => uname.to_string_lossy() == #user_name,
-                    None => false,
-                };
-                if is_user {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(format!("{}because this case should run with user {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let is_user = match libtest_with::uzers::get_current_username() {
-                    Some(uname) => uname.to_string_lossy() == #user_name,
-                    None => false,
-                };
-                if is_user {
-                    #ident();
-                    Ok(())
-                } else {
-                    Err(format!("{}because this case should run with user {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    user::runtime_user(attr, stream)
 }
 
 /// Run test case when memory size enough
@@ -2036,35 +812,15 @@ pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_mem_condition,
+            resource::check_mem_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_mem_condition,
+            resource::check_mem_condition,
         )
     }
-}
-
-#[cfg(feature = "resource")]
-fn check_mem_condition(mem_size_str: String) -> (bool, String) {
-    let sys = sysinfo::System::new_with_specifics(
-        sysinfo::RefreshKind::nothing()
-            .with_memory(sysinfo::MemoryRefreshKind::nothing().with_swap()),
-    );
-    let mem_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
-        Ok(b) => b,
-        Err(_) => abort_call_site!("memory size description is not correct"),
-    };
-    let mem_size_limitation = match byte_unit::Byte::parse_str(&mem_size_str, true) {
-        Ok(b) => b,
-        Err(_) => abort_call_site!("system memory size can not get"),
-    };
-    (
-        mem_size >= mem_size_limitation,
-        format!("because the memory less than {}", mem_size_str),
-    )
 }
 
 /// Run test case when the example running and memory size enough
@@ -2089,92 +845,7 @@ pub fn runtime_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let mem_limitation_str = attr.to_string().replace(' ', "");
-    if byte_unit::Byte::parse_str(&mem_limitation_str, true).is_err() {
-        abort_call_site!("memory size description is not correct")
-    }
-
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system memory size can not get"),
-                };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-                if  mem_size >= mem_size_limitation {
-                    #ident().await;
-                    Ok(())
-                } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system memory size can not get"),
-                };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-                if  mem_size >= mem_size_limitation {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system memory size can not get"),
-                };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-                if  mem_size >= mem_size_limitation {
-                    #ident();
-                    Ok(())
-                } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    resource::runtime_mem(attr, stream)
 }
 
 /// Run test case when the example running and free memory size enough
@@ -2199,92 +870,7 @@ pub fn runtime_free_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let mem_limitation_str = attr.to_string().replace(' ', "");
-    if byte_unit::Byte::parse_str(&mem_limitation_str, true).is_err() {
-        abort_call_site!("memory size description is not correct")
-    }
-
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system memory size can not get"),
-                };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-                if  mem_size >= mem_size_limitation {
-                    #ident().await;
-                    Ok(())
-                } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system memory size can not get"),
-                };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-                if  mem_size >= mem_size_limitation {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system memory size can not get"),
-                };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-                if  mem_size >= mem_size_limitation {
-                    #ident();
-                    Ok(())
-                } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    resource::runtime_free_mem(attr, stream)
 }
 
 /// Run test case when the example running and available memory size enough
@@ -2309,92 +895,7 @@ pub fn runtime_available_mem(_attr: TokenStream, _stream: TokenStream) -> TokenS
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let mem_limitation_str = attr.to_string().replace(' ', "");
-    if byte_unit::Byte::parse_str(&mem_limitation_str, true).is_err() {
-        abort_call_site!("memory size description is not correct")
-    }
-
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system memory size can not get"),
-                };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-                if  mem_size >= mem_size_limitation {
-                    #ident().await;
-                    Ok(())
-                } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system memory size can not get"),
-                };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-                if  mem_size >= mem_size_limitation {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system memory size can not get"),
-                };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
-                if  mem_size >= mem_size_limitation {
-                    #ident();
-                    Ok(())
-                } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    resource::runtime_available_mem(attr, stream)
 }
 
 /// Run test case when swap size enough
@@ -2419,35 +920,15 @@ pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_swap_condition,
+            resource::check_swap_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_swap_condition,
+            resource::check_swap_condition,
         )
     }
-}
-
-#[cfg(feature = "resource")]
-fn check_swap_condition(swap_size_str: String) -> (bool, String) {
-    let sys = sysinfo::System::new_with_specifics(
-        sysinfo::RefreshKind::nothing()
-            .with_memory(sysinfo::MemoryRefreshKind::nothing().with_swap()),
-    );
-    let swap_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
-        Ok(b) => b,
-        Err(_) => abort_call_site!("Swap size description is not correct"),
-    };
-    let swap_size_limitation = match byte_unit::Byte::parse_str(&swap_size_str, true) {
-        Ok(b) => b,
-        Err(_) => abort_call_site!("Can not get system swap size"),
-    };
-    (
-        swap_size >= swap_size_limitation,
-        format!("because the swap less than {}", swap_size_str),
-    )
 }
 
 /// Run test case when the example running and swap enough
@@ -2582,92 +1063,7 @@ pub fn runtime_free_swap(_attr: TokenStream, _stream: TokenStream) -> TokenStrea
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let swap_limitation_str = attr.to_string().replace(' ', "");
-    if byte_unit::Byte::parse_str(&swap_limitation_str, true).is_err() {
-        abort_call_site!("swap size description is not correct")
-    }
-
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-                );
-                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system swap size can not get"),
-                };
-                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
-                if swap_size >= swap_size_limitation {
-                    #ident().await;
-                    Ok(())
-                } else {
-                    Err(format!("{}because the swap less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-                );
-                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system swap size can not get"),
-                };
-                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
-                if swap_size >= swap_size_limitation {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(format!("{}because the swap less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-                );
-                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
-                    Ok(b) => b,
-                    Err(_) => panic!("system swap size can not get"),
-                };
-                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
-                if swap_size >= swap_size_limitation {
-                    #ident();
-                    Ok(())
-                } else {
-                    Err(format!("{}because the swap less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    resource::runtime_free_swap(attr, stream)
 }
 
 /// Run test case when cpu core enough
@@ -2692,26 +1088,15 @@ pub fn cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_cpu_core_condition,
+            resource::check_cpu_core_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_cpu_core_condition,
+            resource::check_cpu_core_condition,
         )
     }
-}
-
-#[cfg(feature = "resource")]
-fn check_cpu_core_condition(core_limitation_str: String) -> (bool, String) {
-    (
-        match core_limitation_str.parse::<usize>() {
-            Ok(c) => num_cpus::get() >= c,
-            Err(_) => abort_call_site!("core limitation is incorrect"),
-        },
-        format!("because the cpu core less than {}", core_limitation_str),
-    )
 }
 
 /// Run test case when cpu core enough
@@ -2736,69 +1121,7 @@ pub fn runtime_cpu_core(_attr: TokenStream, _stream: TokenStream) -> TokenStream
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let core_limitation = match attr_str.parse::<usize>() {
-        Ok(c) => c,
-        Err(_) => abort_call_site!("core limitation is incorrect"),
-    };
-
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get() >= #core_limitation {
-                    #ident().await;
-                    Ok(())
-                } else {
-                    Err(format!("{}because the cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get() >= #core_limitation {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(format!("{}because the cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get() >= #core_limitation {
-                    #ident();
-                    Ok(())
-                } else {
-                    Err(format!("{}because the cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    resource::runtime_cpu_core(attr, stream)
 }
 
 /// Run test case when physical cpu core enough
@@ -2823,29 +1146,15 @@ pub fn phy_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_cpu_core_condition,
+            resource::check_cpu_core_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_phy_core_condition,
+            resource::check_phy_core_condition,
         )
     }
-}
-
-#[cfg(feature = "resource")]
-fn check_phy_core_condition(core_limitation_str: String) -> (bool, String) {
-    (
-        match core_limitation_str.parse::<usize>() {
-            Ok(c) => num_cpus::get_physical() >= c,
-            Err(_) => abort_call_site!("physical core limitation is incorrect"),
-        },
-        format!(
-            "because the physical cpu core less than {}",
-            core_limitation_str
-        ),
-    )
 }
 
 /// Run test case when physical core enough
@@ -2870,69 +1179,7 @@ pub fn runtime_phy_cpu_core(_attr: TokenStream, _stream: TokenStream) -> TokenSt
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let core_limitation = match attr_str.parse::<usize>() {
-        Ok(c) => c,
-        Err(_) => abort_call_site!("physical core limitation is incorrect"),
-    };
-
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get_physical() >= #core_limitation {
-                    #ident().await;
-                    Ok(())
-                } else {
-                    Err(format!("{}because the physical cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get_physical() >= #core_limitation {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(format!("{}because the physical cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get_physical() >= #core_limitation {
-                    #ident();
-                    Ok(())
-                } else {
-                    Err(format!("{}because the physical cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+    resource::runtime_phy_cpu_core(attr, stream)
 }
 
 /// Run test case when the executables exist.
@@ -2983,61 +1230,14 @@ pub fn executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
         mod_macro(
             attr,
             parse_macro_input!(stream as ItemMod),
-            check_executable_condition,
+            executable::check_executable_condition,
         )
     } else {
         fn_macro(
             attr,
             parse_macro_input!(stream as ItemFn),
-            check_executable_condition,
+            executable::check_executable_condition,
         )
-    }
-}
-
-#[cfg(feature = "executable")]
-fn check_executable_and_condition(attr_str: String) -> (bool, String) {
-    let executables: Vec<&str> = attr_str.split(',').collect();
-    let mut missing_executables = vec![];
-    for exe in executables.iter() {
-        if which(exe.trim_matches('"')).is_err() {
-            missing_executables.push(exe.to_string());
-        }
-    }
-    let ignore_msg = if missing_executables.len() == 1 {
-        format!("because executable not found: {}", missing_executables[0])
-    } else {
-        format!(
-            "because following executables not found: \n{}\n",
-            missing_executables.join("\n")
-        )
-    };
-    (missing_executables.is_empty(), ignore_msg)
-}
-
-#[cfg(feature = "executable")]
-fn check_executable_or_condition(attr_str: String) -> (bool, String) {
-    let executables: Vec<&str> = attr_str.split("||").collect();
-    for exe in executables.iter() {
-        if which(exe.trim_matches('"')).is_ok() {
-            return (true, String::new());
-        }
-    }
-    (
-        false,
-        format!("because none of executables can be found: {}", attr_str),
-    )
-}
-
-#[cfg(feature = "executable")]
-fn check_executable_condition(attr_str: String) -> (bool, String) {
-    let has_and_cond = attr_str.contains(',');
-    let has_or_cond = attr_str.contains("||");
-    if has_and_cond && has_or_cond {
-        abort_call_site!("',' and '||' can not be used at the same time")
-    } else if has_or_cond {
-        check_executable_or_condition(attr_str)
-    } else {
-        check_executable_and_condition(attr_str)
     }
 }
 
@@ -3063,17 +1263,40 @@ pub fn runtime_executable(_attr: TokenStream, _stream: TokenStream) -> TokenStre
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string().replace(' ', "");
-    let has_and_cond = attr_str.contains(',');
-    let has_or_cond = attr_str.contains("||");
-    if has_and_cond && has_or_cond {
-        abort_call_site!("',' and '||' can not be used at the same time")
-    }
-    let executables: Vec<&str> = if has_or_cond {
-        attr_str.split("||").collect()
-    } else {
-        attr_str.split(',').collect()
-    };
+    executable::runtime_executable(attr, stream)
+}
+
+/// Ignore test case when function return some reason
+/// The function should be `fn() -> Option<String>`
+/// ```
+/// test_with::runner!(custom_mod);
+///
+/// fn something_happened() -> Option<String> {
+///     Some("because something happened".to_string())
+/// }
+///
+/// #[test_with::module]
+/// mod custom_mod {
+/// #[test_with::runtime_ignore_if(something_happened)]
+/// fn test_ignored() {
+///     assert!(false);
+///     }
+/// }
+/// ```
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_ignore_if(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+#[cfg(feature = "runtime")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    let ignore_function = syn::Ident::new(
+        &attr.to_string().replace(' ', ""),
+        proc_macro2::Span::call_site(),
+    );
     let ItemFn {
         attrs,
         vis,
@@ -3086,118 +1309,37 @@ pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream
         proc_macro2::Span::call_site(),
     );
 
-    let check_fn = match (has_or_cond, &sig.asyncness, &sig.output) {
-        (true, Some(_), ReturnType::Default) => quote::quote! {
+    let check_fn = match (&sig.asyncness, &sig.output) {
+        (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                #(
-                    if libtest_with::which::which(#executables).is_ok() {
-                        #ident().await;
-                        return Ok(());
-                    }
-                )*
-                Err(format!("{}because none of executables can be found:\n{}\n",
-                    libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
-            }
-        },
-        (false, Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_executables = vec![];
-                #(
-                    if libtest_with::which::which(#executables).is_err() {
-                        missing_executables.push(#executables);
-                    }
-                )*
-                match missing_executables.len() {
-                    0 => {
-                        #ident().await;
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because executable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following executables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
-                    ).into()),
+                if let Some(msg) = #ignore_function() {
+                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                } else {
+                    #ident().await;
+                    Ok(())
                 }
             }
         },
-        (true, Some(_), ReturnType::Type(_, _)) => quote::quote! {
+        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
             async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                #(
-                    if libtest_with::which::which(#executables).is_ok() {
-                        if let Err(e) = #ident().await {
-                            return Err(format!("{e:?}").into());
-                        } else {
-                            return Ok(());
-                        }
+                if let Some(msg) = #ignore_function() {
+                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                } else {
+                    if let Err(e) = #ident().await {
+                        Err(format!("{e:?}").into())
+                    } else {
+                        Ok(())
                     }
-                )*
-                Err(format!("{}because none of executables can be found:\n{}\n",
-                    libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
-            }
-        },
-        (false, Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_executables = vec![];
-                #(
-                    if libtest_with::which::which(#executables).is_err() {
-                        missing_executables.push(#executables);
-                    }
-                )*
-                match missing_executables.len() {
-                    0 => {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                    },
-                    1 => Err(
-                        format!("{}because executable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following executables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
-                    ).into()),
                 }
             }
         },
-        (true, None, _) => quote::quote! {
+        (None, _) => quote::quote! {
             fn #check_ident() -> Result<(), libtest_with::Failed> {
-                #(
-                    if libtest_with::which::which(#executables).is_ok() {
-                        #ident();
-                        return Ok(());
-                    }
-                )*
-                Err(format!("{}because none of executables can be found:\n{}\n",
-                    libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
-            }
-        },
-        (false, None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut missing_executables = vec![];
-                #(
-                    if libtest_with::which::which(#executables).is_err() {
-                        missing_executables.push(#executables);
-                    }
-                )*
-                match missing_executables.len() {
-                    0 => {
-                        #ident();
-                        Ok(())
-                    },
-                    1 => Err(
-                        format!("{}because executable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following executables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
-                    ).into()),
+                if let Some(msg) = #ignore_function() {
+                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                } else {
+                    #ident();
+                    Ok(())
                 }
             }
         },
@@ -3209,6 +1351,132 @@ pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream
             #vis #sig #block
     }
     .into()
+}
+
+/// Run test case one by one when the lock is acquired
+/// It will automatically implement a file lock for the test case to prevent it run in the same
+/// time. Also, you can pass the second parameter to specific the waiting seconds, default will be
+/// 60 seconds.
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // `LOCK` is file based lock to prevent test1 an test2 run at the same time
+///     #[test_with::lock(LOCK)]
+///     #[test]
+///     fn test_1() {
+///         assert!(true);
+///     }
+///
+///     // `LOCK` is file based lock to prevent test1 an test2 run at the same time
+///     #[test_with::lock(LOCK)]
+///     #[test]
+///     fn test_2() {
+///         assert!(true);
+///     }
+///
+///     // `ANOTHER_LOCK` is file based lock to prevent test3 an test4 run at the same time with 3 sec
+///     // waiting time.
+///     #[test_with::lock(ANOTHER_LOCK, 3)]
+///     fn test_3() {
+///         assert!(true);
+///     }
+///
+///     // `ANOTHER_LOCK` is file based lock to prevent test3 an test4 run at the same time with 3 sec
+///     // waiting time.
+///     #[test_with::lock(ANOTHER_LOCK, 3)]
+///     fn test_4() {
+///         assert!(true);
+///     }
+///
+/// }
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn lock(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        abort_call_site!("#[test_with::lock] only works with fn")
+    } else {
+        lock_macro(attr, parse_macro_input!(stream as ItemFn))
+    }
+}
+
+/// Run test case when the timezone is expected.
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///
+///     // 0 means UTC
+///     #[test_with::timezone(0)]
+///     #[test]
+///     fn test_works() {
+///         assert!(true);
+///     }
+///
+///     // UTC is GMT+0
+///     #[test_with::timezone(UTC)]
+///     #[test]
+///     fn test_works_too() {
+///         assert!(true);
+///     }
+///
+///     // +8 means GMT+8
+///     #[test_with::timezone(+8)]
+///     #[test]
+///     fn test_ignored() {
+///         panic!("should be ignored")
+///     }
+///
+///     // HKT GMT+8
+///     #[test_with::timezone(HKT)]
+///     #[test]
+///     fn test_ignored_too() {
+///         panic!("should be ignored")
+///     }
+/// }
+/// ```
+#[cfg(feature = "timezone")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    if is_module(&stream) {
+        mod_macro(
+            attr,
+            parse_macro_input!(stream as ItemMod),
+            timezone::check_tz_condition,
+        )
+    } else {
+        fn_macro(
+            attr,
+            parse_macro_input!(stream as ItemFn),
+            timezone::check_tz_condition,
+        )
+    }
+}
+
+/// Run test case when the example running within specific timzones.
+///```rust
+/// // write as example in examples/*rs
+/// test_with::runner!(timezone);
+/// #[test_with::module]
+/// mod timezone {
+///     // 0 means UTC timezone
+///     #[test_with::runtime_timezone(0)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(not(feature = "runtime"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_timezone(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    abort_call_site!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime", feature = "timezone"))]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    timezone::runtime_timezone(attr, stream)
 }
 
 /// Provide a test runner and test on each module
@@ -3235,64 +1503,25 @@ pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream
 #[cfg(not(feature = "runtime"))]
 #[proc_macro]
 pub fn runner(_input: TokenStream) -> TokenStream {
-    panic!("should be used with runtime feature")
+    abort_call_site!("should be used with runtime feature")
 }
 #[cfg(feature = "runtime")]
 #[proc_macro]
 pub fn runner(input: TokenStream) -> TokenStream {
-    let input_str = input.to_string();
-    let mod_names: Vec<syn::Ident> = input_str
-        .split(",")
-        .map(|s| syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
-        .collect();
-    quote::quote! {
-        fn main() {
-            let args = libtest_with::Arguments::from_args();
-            let mut no_env_tests = Vec::new();
-            #(
-                match #mod_names::_runtime_tests() {
-                    (Some(env), tests) => {
-                        libtest_with::run(&args, tests).exit_if_failed();
-                        drop(env);
-                    },
-                    (None, mut tests) => no_env_tests.append(&mut tests),
-                }
-            )*
-            libtest_with::run(&args, no_env_tests).exit();
-        }
-    }
-    .into()
+    runtime::runner(input)
 }
 
 #[cfg(not(feature = "runtime"))]
 #[proc_macro]
 pub fn tokio_runner(_input: TokenStream) -> TokenStream {
-    panic!("should be used with `runtime` feature, and add `test-with-async` in your project")
+    abort_call_site!(
+        "should be used with `runtime` feature, and add `test-with-async` in your project"
+    )
 }
 #[cfg(feature = "runtime")]
 #[proc_macro]
 pub fn tokio_runner(input: TokenStream) -> TokenStream {
-    let input_str = input.to_string();
-    let mod_names: Vec<syn::Ident> = input_str
-        .split(",")
-        .map(|s| syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
-        .collect();
-    quote::quote! {
-        fn main() {
-            #[cfg(not(feature = "test-with-async"))]
-            panic!("Please add `test-with-async` feature in your project and run with it");
-            tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap()
-                .block_on(async {
-                    #(
-                        #mod_names::_runtime_tests().await;
-                    )*
-                })
-        }
-    }
-    .into()
+    runtime::tokio_runner(input)
 }
 
 /// Help each function with `#[test_with::runtime_*]` in the module can register to run
@@ -3418,877 +1647,6 @@ pub fn module(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
 #[proc_macro_error]
-pub fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let ItemMod {
-        attrs,
-        vis,
-        mod_token,
-        ident,
-        content,
-        ..
-    } = parse_macro_input!(stream as ItemMod);
-
-    if let Some(content) = content {
-        let content = content.1;
-        if crate::utils::has_test_cfg(&attrs) {
-            abort_call_site!("should not use `#[cfg(test)]` on the mod with `#[test_with::module]`")
-        } else {
-            let mut test_env_type = None;
-            let test_names: Vec<String> = content
-                .iter()
-                .filter_map(|c| match c {
-                    Item::Fn(ItemFn {
-                        sig: syn::Signature { ident, .. },
-                        attrs,
-                        ..
-                    }) => match crate::utils::test_with_attrs(&attrs) {
-                        (true, true, _) => abort_call_site!(
-                            "should not use #[test] for method in `#[test_with::module]`"
-                        ),
-                        (_, true, false) => abort_call_site!(
-                            "use `#[test_with::runtime_*]` for method in `#[test_with::module]`"
-                        ),
-                        (false, true, true) => Some(ident.to_string()),
-                        _ => None,
-                    },
-                    Item::Struct(ItemStruct { ident, vis, .. })
-                    | Item::Type(ItemType { ident, vis, .. }) => {
-                        if ident.to_string() == "TestEnv" {
-                            match vis {
-                                syn::Visibility::Public(_) => test_env_type = Some(ident),
-                                _ => abort_call_site!("TestEnv should be pub for testing"),
-                            }
-                        }
-                        None
-                    }
-                    _ => None,
-                })
-                .collect();
-            let check_names: Vec<syn::Ident> = test_names
-                .iter()
-                .map(|c| {
-                    syn::Ident::new(
-                        &format!("_check_{}", c.to_string()),
-                        proc_macro2::Span::call_site(),
-                    )
-                })
-                .collect();
-            let total = check_names.len();
-            if let Some(test_env_type) = test_env_type {
-                quote::quote! {
-                    #(#attrs)*
-                    #vis #mod_token #ident {
-                        use super::*;
-                        #[cfg(not(feature = "test-with-async"))]
-                        pub fn _runtime_tests() -> (Option<#test_env_type>, Vec<libtest_with::Trial>) {
-                            use libtest_with::Trial;
-                            (
-                                Some(#test_env_type::default()),
-                                vec![
-                                    #(Trial::test(#test_names, #check_names),)*
-                                ]
-                            )
-                        }
-                        #[cfg(feature = "test-with-async")]
-                        pub async fn _runtime_tests() {
-                            let env = #test_env_type::default();
-                            let mut failed = 0;
-                            let mut passed = 0;
-                            let mut ignored = 0;
-                            println!("running {} tests of {}\n", #total, stringify!(#ident));
-                            #(
-                                print!("test {}::{} ... ", stringify!(#ident), #test_names);
-                                if let Err(e) = #check_names().await {
-                                    if let Some(msg) = e.message() {
-                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
-                                            println!("ignored, {}", msg[12..].to_string());
-                                            ignored += 1;
-                                        } else {
-                                            println!("FAILED, {msg}");
-                                            failed += 1;
-                                        }
-                                    } else {
-                                        println!("FAILED");
-                                        failed += 1;
-                                    }
-                                } else {
-                                    println!("ok");
-                                    passed += 1;
-                                }
-                            )*
-                            drop(env);
-                            if failed > 0 {
-                                println!("\ntest result: failed. {passed} passed; {failed} failed; {ignored} ignored;\n");
-                                std::process::exit(1);
-                            } else {
-                                println!("\ntest result: ok. {passed} passed; {failed} failed; {ignored} ignored;\n");
-                            }
-                        }
-                        #(#content)*
-                    }
-                }
-                .into()
-            } else {
-                quote::quote! {
-                    #(#attrs)*
-                    #vis #mod_token #ident {
-                        use super::*;
-                        #[cfg(not(feature = "test-with-async"))]
-                        pub fn _runtime_tests() -> (Option<()>, Vec<libtest_with::Trial>) {
-                            use libtest_with::Trial;
-                            (
-                                None,
-                                vec![
-                                    #(Trial::test(#test_names, #check_names),)*
-                                ]
-                            )
-                        }
-                        #[cfg(feature = "test-with-async")]
-                        pub async fn _runtime_tests() {
-                            let mut failed = 0;
-                            let mut passed = 0;
-                            let mut ignored = 0;
-                            println!("running {} tests of {}\n", #total, stringify!(#ident));
-                            #(
-                                print!("test {}::{} ... ", stringify!(#ident), #test_names);
-                                if let Err(e) = #check_names().await {
-                                    if let Some(msg) = e.message() {
-                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
-                                            println!("ignored, {}", msg[12..].to_string());
-                                            ignored += 1;
-                                        } else {
-                                            println!("FAILED, {msg}");
-                                            failed += 1;
-                                        }
-                                    } else {
-                                        println!("FAILED");
-                                        failed += 1;
-                                    }
-                                } else {
-                                    println!("ok");
-                                    passed += 1;
-                                }
-                            )*
-                            if failed > 0 {
-                                println!("\ntest result: failed. {passed} passed; {failed} failed; {ignored} ignored;\n");
-                                std::process::exit(1);
-                            } else {
-                                println!("\ntest result: ok. {passed} passed; {failed} failed; {ignored} ignored;\n");
-                            }
-                        }
-                        #(#content)*
-                    }
-                }
-                .into()
-            }
-        }
-    } else {
-        abort_call_site!("should use on mod with context")
-    }
-}
-
-/// Ignore test case when function return some reason
-/// The function should be `fn() -> Option<String>`
-/// ```
-/// test_with::runner!(custom_mod);
-///
-/// fn something_happened() -> Option<String> {
-///     Some("because something happened".to_string())
-/// }
-///
-/// #[test_with::module]
-/// mod custom_mod {
-/// #[test_with::runtime_ignore_if(something_happened)]
-/// fn test_ignored() {
-///     assert!(false);
-///     }
-/// }
-/// ```
-#[cfg(not(feature = "runtime"))]
-#[proc_macro_attribute]
-#[proc_macro_error]
-pub fn runtime_ignore_if(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
-    panic!("should be used with runtime feature")
-}
-#[cfg(feature = "runtime")]
-#[proc_macro_attribute]
-#[proc_macro_error]
-pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let ignore_function = syn::Ident::new(
-        &attr.to_string().replace(' ', ""),
-        proc_macro2::Span::call_site(),
-    );
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if let Some(msg) = #ignore_function() {
-                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
-                } else {
-                    #ident().await;
-                    Ok(())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if let Some(msg) = #ignore_function() {
-                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
-                } else {
-                    if let Err(e) = #ident().await {
-                        Err(format!("{e:?}").into())
-                    } else {
-                        Ok(())
-                    }
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if let Some(msg) = #ignore_function() {
-                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
-                } else {
-                    #ident();
-                    Ok(())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{check_env_condition, check_no_env_condition};
-
-    mod env_macro {
-        use super::*;
-
-        #[test]
-        fn single_env_var_should_be_not_set() {
-            //* Given
-            let env_var = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = env_var.to_string();
-
-            //* When
-            let (is_ok, ignore_msg) = check_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(!is_ok);
-            // Assert the ignore message should contain only the missing env var names
-            assert!(ignore_msg.contains(env_var));
-        }
-
-        #[test]
-        fn multiple_env_vars_should_not_be_set() {
-            //* Given
-            let env_var1 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-            let env_var2 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}", env_var1, env_var2);
-
-            //* When
-            let (is_ok, ignore_msg) = check_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(!is_ok);
-            // Assert the ignore message should contain only the missing env var names
-            assert!(ignore_msg.contains(env_var1));
-            assert!(ignore_msg.contains(env_var2));
-        }
-
-        #[test]
-        fn single_env_var_should_be_set() {
-            //* Given
-            let env_var = "PATH";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = env_var.to_string();
-
-            //* When
-            let (is_ok, ignore_msg) = check_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(is_ok);
-            // Assert the ignore message should contain only the missing env var names
-            assert!(!ignore_msg.contains(env_var));
-        }
-
-        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
-        /// when the attribute string contains multiple env vars containing spaces and newlines.
-        ///
-        /// ```no_run
-        /// #[test_with::env(
-        ///   PATH,
-        ///   HOME
-        /// )]
-        /// #[test]
-        /// fn some_test() {}
-        #[test]
-        fn multiple_env_vars_should_be_set() {
-            //* Given
-            let env_var1 = "PATH";
-            let env_var2 = "HOME";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("\t{},\n\t{}\n", env_var1, env_var2);
-
-            //* When
-            let (is_ok, ignore_msg) = check_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(is_ok);
-            // Assert the ignore message should contain only the missing env var names
-            assert!(!ignore_msg.contains(env_var1));
-            assert!(!ignore_msg.contains(env_var2));
-        }
-
-        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
-        /// when the attribute string contains multiple env vars and one of them is not set.
-        #[test]
-        fn multiple_env_vars_but_one_is_not_set() {
-            //* Given
-            let env_var1 = "PATH";
-            let env_var2 = "HOME";
-            let env_var3 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
-
-            //* When
-            let (is_ok, ignore_msg) = check_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(!is_ok);
-            // Assert the ignore message should contain only the missing env var names
-            assert!(!ignore_msg.contains(env_var1));
-            assert!(!ignore_msg.contains(env_var2));
-            assert!(ignore_msg.contains(env_var3));
-        }
-
-        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
-        /// when the attribute string contains multiple env vars and various of them are not set.
-        #[test]
-        fn multiple_env_vars_and_various_not_set() {
-            //* Given
-            let env_var1 = "PATH";
-            let env_var2 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-            let env_var3 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
-
-            //* When
-            let (is_ok, ignore_msg) = check_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(!is_ok);
-            // Assert the ignore message should contain only the missing env var names
-            assert!(!ignore_msg.contains(env_var1));
-            assert!(ignore_msg.contains(env_var2));
-            assert!(ignore_msg.contains(env_var3));
-        }
-    }
-
-    mod no_env_macro {
-        use super::*;
-
-        #[test]
-        fn single_env_var_not_set() {
-            //* Given
-            let env_var = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = env_var.to_string();
-
-            //* When
-            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(is_ok);
-            // Assert the ignore message should contain only the found env var names
-            assert!(!ignore_msg.contains(env_var));
-        }
-
-        #[test]
-        fn multiple_env_vars_not_set() {
-            //* Given
-            let env_var1 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-            let env_var2 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}", env_var1, env_var2);
-
-            //* When
-            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(is_ok);
-            // Assert the ignore message should contain only the found env var names
-            assert!(!ignore_msg.contains(env_var1));
-            assert!(!ignore_msg.contains(env_var2));
-        }
-
-        #[test]
-        fn single_env_var_set() {
-            //* Given
-            let env_var = "PATH";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = env_var.to_string();
-
-            //* When
-            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(!is_ok);
-            // Assert the ignore message should contain only the found env var names
-            assert!(ignore_msg.contains(env_var));
-        }
-
-        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
-        /// when the attribute string contains multiple env vars containing spaces and newlines.
-        ///
-        /// ```no_run
-        /// #[test_with::no_env(
-        ///   PATH,
-        ///   HOME
-        /// )]
-        /// #[test]
-        /// fn some_test() {}
-        #[test]
-        fn multiple_env_vars_set() {
-            //* Given
-            let env_var1 = "PATH";
-            let env_var2 = "HOME";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("\t{},\n\t{}\n", env_var1, env_var2);
-
-            //* When
-            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(!is_ok);
-            // Assert the ignore message should contain only the found env var names
-            assert!(ignore_msg.contains(env_var1));
-            assert!(ignore_msg.contains(env_var2));
-        }
-
-        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
-        /// when the attribute string contains multiple env vars and one of them is set.
-        #[test]
-        fn multiple_env_vars_but_one_is_set() {
-            //* Given
-            let env_var1 = "PATH";
-            let env_var2 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-            let env_var3 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
-
-            //* When
-            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(!is_ok);
-            // Assert the ignore message should contain only the found env var names
-            assert!(ignore_msg.contains(env_var1));
-            assert!(!ignore_msg.contains(env_var2));
-            assert!(!ignore_msg.contains(env_var3));
-        }
-
-        /// Test the `test_with::env(<attr_str>)` macro should parse the attribute string correctly
-        /// when the attribute string contains multiple env vars and various of them are set.
-        #[test]
-        fn multiple_env_vars_and_various_are_set() {
-            //* Given
-            let env_var1 = "PATH";
-            let env_var2 = "HOME";
-            let env_var3 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
-
-            // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
-
-            //* When
-            let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
-
-            //* Then
-            // Assert if the test should be ignored
-            assert!(!is_ok);
-            // Assert the ignore message should contain only the found env var names
-            assert!(ignore_msg.contains(env_var1));
-            assert!(ignore_msg.contains(env_var2));
-            assert!(!ignore_msg.contains(env_var3));
-        }
-    }
-}
-
-/// Run test case one by one when the lock is acquired
-/// It will automatically implement a file lock for the test case to prevent it run in the same
-/// time. Also, you can pass the second parameter to specific the waiting seconds, default will be
-/// 60 seconds.
-/// ```
-/// #[cfg(test)]
-/// mod tests {
-///
-///     // `LOCK` is file based lock to prevent test1 an test2 run at the same time
-///     #[test_with::lock(LOCK)]
-///     #[test]
-///     fn test_1() {
-///         assert!(true);
-///     }
-///
-///     // `LOCK` is file based lock to prevent test1 an test2 run at the same time
-///     #[test_with::lock(LOCK)]
-///     #[test]
-///     fn test_2() {
-///         assert!(true);
-///     }
-///
-///     // `ANOTHER_LOCK` is file based lock to prevent test3 an test4 run at the same time with 3 sec
-///     // waiting time.
-///     #[test_with::lock(ANOTHER_LOCK, 3)]
-///     fn test_3() {
-///         assert!(true);
-///     }
-///
-///     // `ANOTHER_LOCK` is file based lock to prevent test3 an test4 run at the same time with 3 sec
-///     // waiting time.
-///     #[test_with::lock(ANOTHER_LOCK, 3)]
-///     fn test_4() {
-///         assert!(true);
-///     }
-///
-/// }
-#[proc_macro_attribute]
-#[proc_macro_error]
-pub fn lock(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    if is_module(&stream) {
-        abort_call_site!("#[test_with::lock] only works with fn")
-    } else {
-        lock_macro(attr, parse_macro_input!(stream as ItemFn))
-    }
-}
-
-/// Run test case when the timezone is expected.
-/// ```
-/// #[cfg(test)]
-/// mod tests {
-///
-///     // 0 means UTC
-///     #[test_with::timezone(0)]
-///     #[test]
-///     fn test_works() {
-///         assert!(true);
-///     }
-///
-///     // UTC is GMT+0
-///     #[test_with::timezone(UTC)]
-///     #[test]
-///     fn test_works_too() {
-///         assert!(true);
-///     }
-///
-///     // +8 means GMT+8
-///     #[test_with::timezone(+8)]
-///     #[test]
-///     fn test_ignored() {
-///         panic!("should be ignored")
-///     }
-///
-///     // HKT GMT+8
-///     #[test_with::timezone(HKT)]
-///     #[test]
-///     fn test_ignored_too() {
-///         panic!("should be ignored")
-///     }
-/// }
-/// ```
-#[cfg(feature = "timezone")]
-#[proc_macro_attribute]
-#[proc_macro_error]
-pub fn timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    if is_module(&stream) {
-        mod_macro(
-            attr,
-            parse_macro_input!(stream as ItemMod),
-            check_tz_condition,
-        )
-    } else {
-        fn_macro(
-            attr,
-            parse_macro_input!(stream as ItemFn),
-            check_tz_condition,
-        )
-    }
-}
-
-#[cfg(feature = "timezone")]
-fn check_timezone(attr_str: &str) -> (bool, Vec<&str>) {
-    let mut incorrect_tzs = vec![];
-    let mut match_tz = false;
-    let current_tz = chrono::Local::now().offset().local_minus_utc() / 60;
-
-    for tz in attr_str.split(',') {
-        let parsed_tz = match tz {
-            "NZDT" => Ok(13 * 60),
-            "NZST" => Ok(12 * 60),
-            "AEDT" => Ok(11 * 60),
-            "ACDT" => Ok(10 * 60 + 30),
-            "AEST" => Ok(10 * 60),
-            "ACST" => Ok(9 * 60 + 30),
-            "KST" | "JST" => Ok(9 * 60),
-            "HKT" | "WITA" | "AWST" => Ok(8 * 60),
-            "PST" => abort_call_site!("PST can be GMT+8 or GMT-8, please use +8 or -8 instead"),
-            "WIB" => Ok(7 * 60),
-            "CST" => abort_call_site!("PST can be GMT+8 or GMT-6, please use +8 or -6 instead"),
-            "5.5" | "+5.5" => Ok(5 * 60 + 30),
-            "IST" => abort_call_site!(
-                "IST can be GMT+5.5, GMT+2 or GMT+1, please use +5.5, 2 or 1 instead"
-            ),
-            "PKT" => Ok(5 * 60),
-            "EAT" | "EEST" | "IDT" | "MSK" => Ok(3 * 60),
-            "CAT" | "EET" | "CEST" | "SAST" => Ok(2 * 60),
-            "CET" | "WAT" | "WEST" | "BST" => Ok(60),
-            "UTC" | "GMT" | "WET" => Ok(0),
-            "NDT" | "-2.5" => Ok(-2 * 60 - 30),
-            "NST" | "-3.5" => Ok(-3 * 60 - 30),
-            "ADT" => Ok(-3 * 60),
-            "AST" | "EDT" => Ok(-4 * 60),
-            "EST" | "CDT" => Ok(-5 * 60),
-            "MDT" => Ok(-6 * 60),
-            "MST" | "PDT" => Ok(-7 * 60),
-            "AKDT" => Ok(-8 * 60),
-            "HDT" | "AKST" => Ok(-9 * 60),
-            "HST" => Ok(-10 * 60),
-            _ => tz.parse::<i32>().map(|tz| tz * 60),
-        };
-        if let Ok(parsed_tz) = parsed_tz {
-            match_tz |= current_tz == parsed_tz;
-        } else {
-            incorrect_tzs.push(tz);
-        }
-    }
-    (match_tz, incorrect_tzs)
-}
-
-#[cfg(feature = "timezone")]
-fn check_tz_condition(attr_str: String) -> (bool, String) {
-    let (match_tz, incorrect_tzs) = check_timezone(&attr_str);
-
-    // Generate ignore message
-    if incorrect_tzs.len() == 1 {
-        (
-            false,
-            format!("because timezone {} is incorrect", incorrect_tzs[0]),
-        )
-    } else if incorrect_tzs.len() > 1 {
-        (
-            false,
-            format!(
-                "because following timezones are incorrect:\n{}\n",
-                incorrect_tzs.join(", ")
-            ),
-        )
-    } else if match_tz {
-        (true, String::new())
-    } else {
-        (
-            false,
-            format!(
-                "because the test case not run in following timezone:\n{}\n",
-                attr_str
-            ),
-        )
-    }
-}
-
-/// Run test case when the example running within specific timzones.
-///```rust
-/// // write as example in examples/*rs
-/// test_with::runner!(timezone);
-/// #[test_with::module]
-/// mod timezone {
-///     // 0 means UTC timezone
-///     #[test_with::runtime_timezone(0)]
-///     fn test_works() {
-///         assert!(true);
-///     }
-/// }
-#[cfg(not(feature = "runtime"))]
-#[proc_macro_attribute]
-#[proc_macro_error]
-pub fn runtime_timezone(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
-    panic!("should be used with runtime feature")
-}
-
-#[cfg(all(feature = "runtime", feature = "timezone"))]
-#[proc_macro_attribute]
-#[proc_macro_error]
-pub fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    let attr_str = attr.to_string();
-    let ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    } = parse_macro_input!(stream as ItemFn);
-    let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
-
-    let check_fn = match (&sig.asyncness, &sig.output) {
-        (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut incorrect_tzs = vec![];
-                let mut match_tz = false;
-                let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
-                for tz in #attr_str.split(',') {
-                    if let Ok(parsed_tz) = tz.parse::<i32>() {
-                        match_tz |= current_tz == parsed_tz;
-                    } else {
-                        incorrect_tzs.push(tz);
-                    }
-                }
-
-                if match_tz && incorrect_tzs.is_empty() {
-                        #ident().await;
-                        Ok(())
-                } else if incorrect_tzs.len() == 1 {
-                    Err(
-                        format!("{}because timezone {} is incorrect",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
-                    ).into())
-                } else if incorrect_tzs.len() > 1 {
-                    Err(
-                        format!("{}because following timezones are incorrect:\n{:?}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
-                    ).into())
-                } else {
-                    Err(
-                        format!(
-                        "{}because the test case not run in following timezone:\n{}\n",
-                        libtest_with::RUNTIME_IGNORE_PREFIX,
-                        #attr_str
-                    ).into())
-                }
-            }
-        },
-        (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut incorrect_tzs = vec![];
-                let mut match_tz = false;
-                let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
-                for tz in #attr_str.split(',') {
-                    if let Ok(parsed_tz) = tz.parse::<i32>() {
-                        match_tz |= current_tz == parsed_tz;
-                    } else {
-                        incorrect_tzs.push(tz);
-                    }
-                }
-
-                if match_tz && incorrect_tzs.is_empty() {
-                        if let Err(e) = #ident().await {
-                            Err(format!("{e:?}").into())
-                        } else {
-                            Ok(())
-                        }
-                } else if incorrect_tzs.len() == 1 {
-                    Err(
-                        format!("{}because timezone {} is incorrect",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
-                    ).into())
-                } else if incorrect_tzs.len() > 1 {
-                    Err(
-                        format!("{}because following timezones are incorrect:\n{:?}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
-                    ).into())
-                } else {
-                    Err(
-                        format!(
-                        "{}because the test case not run in following timezone:\n{}\n",
-                        libtest_with::RUNTIME_IGNORE_PREFIX,
-                        #attr_str
-                    ).into())
-                }
-            }
-        },
-        (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let mut incorrect_tzs = vec![];
-                let mut match_tz = false;
-                let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
-                for tz in #attr_str.split(',') {
-                    if let Ok(parsed_tz) = tz.parse::<i32>() {
-                        match_tz |= current_tz == parsed_tz;
-                    } else {
-                        incorrect_tzs.push(tz);
-                    }
-                }
-
-                if match_tz && incorrect_tzs.is_empty() {
-                        #ident();
-                        Ok(())
-                } else if incorrect_tzs.len() == 1 {
-                    Err(
-                        format!("{}because timezone {} is incorrect",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
-                    ).into())
-                } else if incorrect_tzs.len() > 1 {
-                    Err(
-                        format!("{}because following timezones are incorrect:\n{:?}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
-                    ).into())
-                } else {
-                    Err(
-                        format!(
-                        "{}because the test case not run in following timezone:\n{}\n",
-                        libtest_with::RUNTIME_IGNORE_PREFIX,
-                        #attr_str
-                    ).into())
-                }
-            }
-        },
-    };
-
-    quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
-    }
-    .into()
+pub fn module(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    runtime::module(attr, stream)
 }

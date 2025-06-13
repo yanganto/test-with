@@ -13,6 +13,7 @@ fn fibonacci_test(#[case] input: u32, #[case] expected: u32) {
     assert_eq!(expected, fibonacci(input))
 }
 
+#[allow(dead_code)]
 fn fibonacci(input: u32) -> u32 {
     match input {
         0 => 0,
