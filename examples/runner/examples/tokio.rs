@@ -1,5 +1,4 @@
 // Use tokio_runner for tokio tests
-// Besides, use `test-with-async` feature for this example
 test_with::tokio_runner!(
     env_tests,
     file_tests,
