@@ -1514,9 +1514,7 @@ pub fn runner(input: TokenStream) -> TokenStream {
 #[cfg(not(feature = "runtime"))]
 #[proc_macro]
 pub fn tokio_runner(_input: TokenStream) -> TokenStream {
-    abort_call_site!(
-        "should be used with `runtime` feature, and add `test-with-async` in your project"
-    )
+    abort_call_site!("should be used with `runtime` feature")
 }
 #[cfg(feature = "runtime")]
 #[proc_macro]

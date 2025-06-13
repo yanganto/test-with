@@ -35,8 +35,6 @@ pub(crate) fn tokio_runner(input: TokenStream) -> TokenStream {
         .collect();
     quote::quote! {
         fn main() {
-            #[cfg(not(feature = "test-with-async"))]
-            panic!("Please add `test-with-async` feature in your project and run with it");
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
@@ -67,11 +65,14 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
             abort_call_site!("should not use `#[cfg(test)]` on the mod with `#[test_with::module]`")
         } else {
             let mut test_env_type = None;
-            let test_names: Vec<String> = content
+            let test_metas: Vec<(String, bool)> = content
                 .iter()
                 .filter_map(|c| match c {
                     Item::Fn(ItemFn {
-                        sig: syn::Signature { ident, .. },
+                        sig:
+                            syn::Signature {
+                                ident, asyncness, ..
+                            },
                         attrs,
                         ..
                     }) => match crate::utils::test_with_attrs(&attrs) {
@@ -81,7 +82,7 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                         (_, true, false) => abort_call_site!(
                             "use `#[test_with::runtime_*]` for method in `#[test_with::module]`"
                         ),
-                        (false, true, true) => Some(ident.to_string()),
+                        (false, true, true) => Some((ident.to_string(), asyncness.is_some())),
                         _ => None,
                     },
                     Item::Struct(ItemStruct { ident, vis, .. })
@@ -97,22 +98,20 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     _ => None,
                 })
                 .collect();
-            let check_names: Vec<syn::Ident> = test_names
-                .iter()
-                .map(|c| {
-                    syn::Ident::new(
-                        &format!("_check_{}", c.to_string()),
-                        proc_macro2::Span::call_site(),
-                    )
-                })
-                .collect();
-            let total = check_names.len();
-            if let Some(test_env_type) = test_env_type {
-                quote::quote! {
-                    #(#attrs)*
-                    #vis #mod_token #ident {
-                        use super::*;
-                        #[cfg(not(feature = "test-with-async"))]
+
+            let runtime_test_fn = match (test_env_type, test_metas.iter().any(|m| m.1)) {
+                (Some(test_env_type), false) => {
+                    let test_names: Vec<String> = test_metas.into_iter().map(|m| m.0).collect();
+                    let check_names: Vec<syn::Ident> = test_names
+                        .iter()
+                        .map(|c| {
+                            syn::Ident::new(
+                                &format!("_check_{}", c.to_string()),
+                                proc_macro2::Span::call_site(),
+                            )
+                        })
+                        .collect();
+                    quote::quote! {
                         pub fn _runtime_tests() -> (Option<#test_env_type>, Vec<libtest_with::Trial>) {
                             use libtest_with::Trial;
                             (
@@ -122,7 +121,39 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                 ]
                             )
                         }
-                        #[cfg(feature = "test-with-async")]
+                    }
+                }
+                (Some(test_env_type), true) => {
+                    let async_test_names: Vec<String> = test_metas
+                        .iter()
+                        .filter(|m| m.1)
+                        .map(|m| m.0.clone())
+                        .collect();
+                    let sync_test_names: Vec<String> = test_metas
+                        .into_iter()
+                        .filter(|m| !m.1)
+                        .map(|m| m.0)
+                        .collect();
+                    let total = async_test_names.len() + sync_test_names.len();
+                    let async_check_names: Vec<syn::Ident> = async_test_names
+                        .iter()
+                        .map(|c| {
+                            syn::Ident::new(
+                                &format!("_check_{}", c.to_string()),
+                                proc_macro2::Span::call_site(),
+                            )
+                        })
+                        .collect();
+                    let sync_check_names: Vec<syn::Ident> = sync_test_names
+                        .iter()
+                        .map(|c| {
+                            syn::Ident::new(
+                                &format!("_check_{}", c.to_string()),
+                                proc_macro2::Span::call_site(),
+                            )
+                        })
+                        .collect();
+                    quote::quote! {
                         pub async fn _runtime_tests() {
                             let env = #test_env_type::default();
                             let mut failed = 0;
@@ -130,8 +161,28 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                             let mut ignored = 0;
                             println!("running {} tests of {}\n", #total, stringify!(#ident));
                             #(
-                                print!("test {}::{} ... ", stringify!(#ident), #test_names);
-                                if let Err(e) = #check_names().await {
+                                print!("test {}::{} ... ", stringify!(#ident), #async_test_names);
+                                if let Err(e) = #async_check_names().await {
+                                    if let Some(msg) = e.message() {
+                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
+                                            println!("ignored, {}", msg[12..].to_string());
+                                            ignored += 1;
+                                        } else {
+                                            println!("FAILED, {msg}");
+                                            failed += 1;
+                                        }
+                                    } else {
+                                        println!("FAILED");
+                                        failed += 1;
+                                    }
+                                } else {
+                                    println!("ok");
+                                    passed += 1;
+                                }
+                            )*
+                            #(
+                                print!("test {}::{} ... ", stringify!(#ident), #sync_test_names);
+                                if let Err(e) = #sync_check_names() {
                                     if let Some(msg) = e.message() {
                                         if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
                                             println!("ignored, {}", msg[12..].to_string());
@@ -157,16 +208,20 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                 println!("\ntest result: ok. {passed} passed; {failed} failed; {ignored} ignored;\n");
                             }
                         }
-                        #(#content)*
                     }
                 }
-                .into()
-            } else {
-                quote::quote! {
-                    #(#attrs)*
-                    #vis #mod_token #ident {
-                        use super::*;
-                        #[cfg(not(feature = "test-with-async"))]
+                (None, false) => {
+                    let test_names: Vec<String> = test_metas.into_iter().map(|m| m.0).collect();
+                    let check_names: Vec<syn::Ident> = test_names
+                        .iter()
+                        .map(|c| {
+                            syn::Ident::new(
+                                &format!("_check_{}", c.to_string()),
+                                proc_macro2::Span::call_site(),
+                            )
+                        })
+                        .collect();
+                    quote::quote! {
                         pub fn _runtime_tests() -> (Option<()>, Vec<libtest_with::Trial>) {
                             use libtest_with::Trial;
                             (
@@ -176,15 +231,67 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                 ]
                             )
                         }
-                        #[cfg(feature = "test-with-async")]
+                    }
+                }
+                (None, true) => {
+                    let async_test_names: Vec<String> = test_metas
+                        .iter()
+                        .filter(|m| m.1)
+                        .map(|m| m.0.clone())
+                        .collect();
+                    let sync_test_names: Vec<String> = test_metas
+                        .into_iter()
+                        .filter(|m| !m.1)
+                        .map(|m| m.0)
+                        .collect();
+                    let total = async_test_names.len() + sync_test_names.len();
+                    let async_check_names: Vec<syn::Ident> = async_test_names
+                        .iter()
+                        .map(|c| {
+                            syn::Ident::new(
+                                &format!("_check_{}", c.to_string()),
+                                proc_macro2::Span::call_site(),
+                            )
+                        })
+                        .collect();
+                    let sync_check_names: Vec<syn::Ident> = sync_test_names
+                        .iter()
+                        .map(|c| {
+                            syn::Ident::new(
+                                &format!("_check_{}", c.to_string()),
+                                proc_macro2::Span::call_site(),
+                            )
+                        })
+                        .collect();
+                    quote::quote! {
                         pub async fn _runtime_tests() {
                             let mut failed = 0;
                             let mut passed = 0;
                             let mut ignored = 0;
                             println!("running {} tests of {}\n", #total, stringify!(#ident));
                             #(
-                                print!("test {}::{} ... ", stringify!(#ident), #test_names);
-                                if let Err(e) = #check_names().await {
+                                print!("test {}::{} ... ", stringify!(#ident), #async_test_names);
+                                if let Err(e) = #async_check_names().await {
+                                    if let Some(msg) = e.message() {
+                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
+                                            println!("ignored, {}", msg[12..].to_string());
+                                            ignored += 1;
+                                        } else {
+                                            println!("FAILED, {msg}");
+                                            failed += 1;
+                                        }
+                                    } else {
+                                        println!("FAILED");
+                                        failed += 1;
+                                    }
+                                } else {
+                                    println!("ok");
+                                    passed += 1;
+                                }
+                            )*
+                            #(
+                                print!("test {}::{} ... ", stringify!(#ident), #sync_test_names);
+                                if let Err(e) = #sync_check_names() {
                                     if let Some(msg) = e.message() {
                                         if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
                                             println!("ignored, {}", msg[12..].to_string());
@@ -209,11 +316,18 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                 println!("\ntest result: ok. {passed} passed; {failed} failed; {ignored} ignored;\n");
                             }
                         }
-                        #(#content)*
                     }
                 }
-                .into()
+            };
+            quote::quote! {
+                #(#attrs)*
+                #vis #mod_token #ident {
+                    use super::*;
+                    #runtime_test_fn
+                    #(#content)*
+                }
             }
+            .into()
         }
     } else {
         abort_call_site!("should use on mod with context")

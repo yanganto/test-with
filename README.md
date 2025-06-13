@@ -25,7 +25,7 @@ Currently, the condition is checked on build-time not runtime and not perfect an
 because of this [issue][original-issue] of rust-lang.
 Here are [slides@COSCUP][coscup-slides] and [slides@COSCON][coscon-slides] to help you know more about it.
 If you really want to check the condition in runtime, please check [runtime section](https://github.com/yanganto/test-with#runtime).
-The `runtime` feature and runtime macros (`test_with::runner!`,`test_with::tokio_runner!`, `#[test_with::module]`, `#[test_with::runtime_*()]`) can help you run the test and check the conditions in runtime.  If you are using `tokio_runner`, the `tokio` dependency is needed and the `test-with-async` feature is needed for your project.
+The `runtime` feature and runtime macros (`test_with::runner!`,`test_with::tokio_runner!`, `#[test_with::module]`, `#[test_with::runtime_*()]`) can help you run the test and check the conditions in runtime.
 Also, the customed test environment or mock service can set with the modules with `runtime` feature.
 
 If you forget to add `#[test]` flag on the test case, `#[test_with]` macro will add it for you.
@@ -357,12 +357,7 @@ mod test_with_mock {
 }
 ```
 
-We can let an example run with async test case, `cargo run --example=<example_name> --features=test-with-async` with the following runtime macros (`test_with::tokio_runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).  Please add the `test-with-async` feature in the `Cargo.toml` of the project.
-```toml
-# Cargo.toml
-[features]
-test-with-async = []
-```
+We can let an example run with async test case, `cargo run --example=<example_name> with the following runtime macros (`test_with::tokio_runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).
 
 Please check out examples under the [example/runner](https://github.com/yanganto/test-with/tree/main/examples/runner) project.
 
