@@ -21,8 +21,8 @@ test-with = { version = "*", default-features = false, features = ["http"] }
 ```
 The features you can use are `net`(`http`, `icmp`), `resource`, `user`, `executable`.
 
-Currently, the condition is checked on build-time not runtime and not perfect and good for most develop scenario,
-because of this [issue][original-issue] of rust-lang.
+Currently, the condition is checked on build-time not runtime, because of this [issue][original-issue] of rust-lang.
+It is not perfect but good enough for most develop scenario.
 Here are [slides@COSCUP][coscup-slides] and [slides@COSCON][coscon-slides] to help you know more about it.
 If you really want to check the condition in runtime, please check [runtime section](https://github.com/yanganto/test-with#runtime).
 The `runtime` feature and runtime macros (`test_with::runner!`,`test_with::tokio_runner!`, `#[test_with::module]`, `#[test_with::runtime_*()]`) can help you run the test and check the conditions in runtime.
@@ -357,7 +357,8 @@ mod test_with_mock {
 }
 ```
 
-We can let an example run with async test case, `cargo run --example=<example_name> with the following runtime macros (`test_with::tokio_runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).
+We can let an example run with async test case with the following runtime macros (`test_with::tokio_runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).
+Also, it is possible to have async test cases and sync test cases at the same time with `test_with::tokio_runner!`.
 
 Please check out examples under the [example/runner](https://github.com/yanganto/test-with/tree/main/examples/runner) project.
 
