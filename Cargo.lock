@@ -902,9 +902,9 @@ checksum = "c19937216e9d3aa9956d9bb8dfc0b0c8beb6058fc4f7a4dc4d850edf86a237d6"
 
 [[package]]
 name = "libtest-with"
-version = "0.8.1-7"
+version = "0.8.1-8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7acb3c2fb576e0aa06a48e135649b9fad0b26bfe303023fd9aeb0176c97b6df3"
+checksum = "2ee78eb374caa1c279f9893a86062a28970af16da38fa5c924232b4cebad0abd"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1153,9 +1153,9 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "ping"
-version = "0.5.2"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "122ee1f5a6843bec84fcbd5c6ba3622115337a6b8965b93a61aad347648f4e8d"
+checksum = "591fab231233fc7e6f2fcbc2647944f0684c9608dea4f267b319bf21b46dc0fa"
 dependencies = [
  "rand",
  "socket2 0.4.10",
@@ -1858,7 +1858,7 @@ dependencies = [
 
 [[package]]
 name = "test-with"
-version = "0.15.1"
+version = "0.15.2"
 dependencies = [
  "byte-unit",
  "chrono",
