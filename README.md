@@ -278,7 +278,7 @@ the test runner will treat it as the test in Rust and also provide the same summ
 The `runtime` feature should be enabled and include as normal dependency, and also include the `libtest-with` with corresponding features in `Cargo.toml`.
 ```toml
 test-with = { version = "0.15.0", features = ["runtime"] }
-libtest-with = { version = "0.8.1-8", features = ["net", "resource", "user", "executable"] }
+libtest-with = { version = "0.8.1-9", features = ["net", "resource", "user", "executable"] }
 ```
 
 Create an example with the following runtime macros (`test_with::runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).

@@ -48,5 +48,5 @@ timezone = ["chrono"]
 [dev-dependencies]
 tokio = { version = "1.38.0", features = ["rt", "rt-multi-thread", "macros"] }
 serial_test = "3.1.1"
-libtest-with = { version = "0.8.1-8", features = ["net", "resource", "user", "executable", "timezone"] }
+libtest-with = { version = "0.8.1-9", features = ["net", "resource", "user", "executable", "timezone"] }
 rstest = "0.25.0"
