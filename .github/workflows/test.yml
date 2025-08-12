@@ -18,7 +18,7 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Example test in features
-        run: nix develop -c feature-test
+        run: nix develop .#ci -c feature-test
 
       - name: Cargo test
-        run: nix develop -c cargo test --all-features
+        run: nix develop .#ci -c cargo test --all-features

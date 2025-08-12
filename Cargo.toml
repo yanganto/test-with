@@ -1,6 +1,6 @@
 [package]
 name = "test-with"
-version = "0.15.3"
+version = "0.15.4"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -8,7 +8,7 @@ description = "A lib help you run test with condition"
 repository = "https://github.com/yanganto/test-with"
 keywords = [ "testing", "condition", "toggle", "integration", "ignore" ]
 categories = [ "development-tools" ]
-rust-version = "1.77.0" # Due to std::fs::create_new
+rust-version = "1.88.0" # Due to sysinfo 
 
 [lib]
 proc-macro = true
@@ -48,5 +48,5 @@ timezone = ["chrono"]
 [dev-dependencies]
 tokio = { version = "1.38.0", features = ["rt", "rt-multi-thread", "macros"] }
 serial_test = "3.1.1"
-libtest-with = { version = "0.8.1-9", features = ["net", "resource", "user", "executable", "timezone"] }
+libtest-with = { version = "0.8.1-10", features = ["net", "resource", "user", "executable", "timezone"] }
 rstest = "0.26.1"

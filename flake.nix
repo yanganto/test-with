@@ -14,7 +14,7 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        rust = pkgs.rust-bin.stable."1.77.2".default;
+        
         dr = dependency-refresh.defaultPackage.${system};
 
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
@@ -50,23 +50,34 @@
           cargo run --example mix
           cargo run --example tokio
         '';
+        cargoTomlConfig = builtins.fromTOML (builtins.readFile ./Cargo.toml);
       in
       with pkgs;
       {
-        devShell = mkShell {
-          buildInputs = [
-            rust
-            openssl
-            pkg-config
+        devShells =  {
+          default = mkShell {
+            buildInputs = [
+              rust-bin.stable.${cargoTomlConfig.package.rust-version}.minimal
+              openssl
+              pkg-config
+            ];
+          };
+          
+          ci = mkShell {
+            buildInputs = [
+              rust-bin.stable.${cargoTomlConfig.package.rust-version}.default
+              openssl
+              pkg-config
 
-            dr
-            publishScript
-            featureTestScript
-            updateDependencyScript
-          ];
-          SAYING = ''
-            The value of a man resides in what he gives
-            and not in what he is capable of receiving.'';
+              dr
+              publishScript
+              featureTestScript
+              updateDependencyScript
+            ];
+            SAYING = ''
+              The value of a man resides in what he gives
+              and not in what he is capable of receiving.'';
+          };
         };
       }
     );
