@@ -24,7 +24,7 @@ jobs:
 
       - name: Update dependency
         id: update-dependency
-        run: nix develop -c 'update-dependency'
+        run: nix develop .#ci -c 'update-dependency'
 
       - name: Create Pull Request
         if: failure() && steps.update-dependency.outcome != 'success'
