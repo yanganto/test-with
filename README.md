@@ -4,7 +4,7 @@
 [![Docs][doc-badge]][doc-url]
 
 A lib help you run test with conditions, else the test will be ignored with clear message.
-Also, you can easiler run test with customed test environment or mock service.
+Also, you can easier run test with customed test environment or mock service.
 
 ## Introduction
 It is good to use this crate in dev dependency as following
