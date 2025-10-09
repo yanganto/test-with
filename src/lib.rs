@@ -1453,7 +1453,7 @@ pub fn timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
     }
 }
 
-/// Run test case when the example running within specific timzones.
+/// Run test case when the example running within specific timezones.
 ///```rust
 /// // write as example in examples/*rs
 /// test_with::runner!(timezone);
