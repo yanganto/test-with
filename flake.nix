@@ -4,7 +4,12 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
-    dependency-refresh.url = "github:yanganto/dependency-refresh";
+    dependency-refresh = {
+      url = "github:yanganto/dependency-refresh";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
   };
 
   outputs = { self, rust-overlay, nixpkgs, flake-utils, dependency-refresh }:
