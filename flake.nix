@@ -44,6 +44,7 @@
           cargo run --no-default-features --features=resource --example=resource
           cargo run --no-default-features --features=executable --example=executable
           cargo run --no-default-features --features=timezone --example=timezone
+          cargo run --no-default-features --features=rhai --example=rhai
           cargo install cargo-hack
           cargo hack test --examples
 
@@ -62,7 +63,8 @@
         devShells =  {
           default = mkShell {
             buildInputs = [
-              rust-bin.stable.${cargoTomlConfig.package.rust-version}.minimal
+              # rust-bin.stable.${cargoTomlConfig.package.rust-version}.minimal
+              rust-bin.nightly.latest.minimal
               openssl
               pkg-config
             ];

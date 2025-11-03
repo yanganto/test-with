@@ -57,6 +57,8 @@ use syn::{parse_macro_input, ItemFn, ItemMod};
 #[cfg(feature = "runtime")]
 use syn::ReturnType;
 
+#[cfg(feature = "rhai")]
+use crate::rhai::rhai_fn_macro;
 use crate::utils::{fn_macro, is_module, lock_macro, mod_macro};
 
 mod env;
@@ -69,6 +71,8 @@ mod http;
 mod icmp;
 #[cfg(feature = "resource")]
 mod resource;
+#[cfg(feature = "rhai")]
+mod rhai;
 #[cfg(feature = "runtime")]
 mod runtime;
 mod socket;
@@ -1647,4 +1651,11 @@ pub fn module(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn module(attr: TokenStream, stream: TokenStream) -> TokenStream {
     runtime::module(attr, stream)
+}
+
+#[cfg(feature = "rhai")]
+#[proc_macro_attribute]
+#[proc_macro_error]
+pub fn rhai(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    rhai_fn_macro(attr, parse_macro_input!(stream as ItemFn))
 }

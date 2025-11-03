@@ -27,6 +27,7 @@ byte-unit = { version = "5.0", optional = true }
 num_cpus = { version = "1.13", optional = true }
 which = { version = "8.0", optional = true }
 chrono = { version = "0.4", optional = true }
+rhai = { version = "1.23.6", optional = true }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 uzers = { version = "0.11.3", optional = true }
@@ -36,6 +37,8 @@ default = ["net", "resource", "user", "executable", "timezone"]
 ign-msg = []
 
 runtime = []
+rhai = ["dep:rhai"]
+
 net = ["http", "icmp"]
 http = ["reqwest"]
 icmp = ["ping"]
