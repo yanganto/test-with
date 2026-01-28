@@ -1073,7 +1073,7 @@ pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream 
 /// mod tests {
 ///
 ///     // Only works with enough cpu core
-///     #[test_with::cpu_core(32)]
+///     #[test_with::cpu_core(64)]
 ///     #[test]
 ///     fn test_ignored() {
 ///         panic!("should be ignored")
@@ -1131,7 +1131,7 @@ pub fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// mod tests {
 ///
 ///     // Only works with enough cpu core
-///     #[test_with::phy_core(32)]
+///     #[test_with::phy_core(64)]
 ///     #[test]
 ///     fn test_ignored() {
 ///         panic!("should be ignored")

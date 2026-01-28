@@ -211,14 +211,14 @@ fn test_ignored3() {
 Run integration test case when the memory/swap is enough
 Require `resource` feature, if default features are disabled.
 ```rust
-#[test_with::cpu_core(32)]
+#[test_with::cpu_core(64)]
 #[test]
 fn test_ignored_by_cpu_core() {
     panic!("should be ignored")
 }
 
 
-#[test_with::phy_core(32)]
+#[test_with::phy_core(64)]
 #[test]
 fn test_ignored_by_physical_cpu_core() {
     panic!("should be ignored")
