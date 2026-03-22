@@ -10,7 +10,8 @@ test_with::tokio_runner!(
     custom_mod,
     timezone_tests,
     net_with_mock,
-    sync_mixed
+    sync_mixed,
+    // empty_mod,
 );
 
 #[test_with::module]
@@ -214,3 +215,9 @@ mod sync_mixed {
         assert!(false);
     }
 }
+
+// TODO: fix bug if user pass a mode into the runner, the compile will fails without clear message
+// /// No testcase in the module
+// #[test_with::module]
+// mod empty_mod {
+// }
