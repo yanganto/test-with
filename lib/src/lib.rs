@@ -21,7 +21,8 @@
 //! The solution to have a real runtime condition check, we need to put the test as normal function
 //! as an example, then use `cargo run --example`
 //! The `test-with` need be included as normal dependency with `runtime` feature.
-//! And also include the `libtest-with` with corresponding features in `Cargo.toml`
+//! And also include the `test-with` as normal dependency (not dev-dependency) corresponding
+//! features in `Cargo.toml`
 //! [macro@runner] and [macro@module] are for the basic skeleton of the test runner.
 //! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file], [macro@runtime_path],
 //! [macro@runtime_http], [macro@runtime_https], [macro@runtime_icmp], [macro@runtime_tcp],

@@ -275,10 +275,9 @@ We can let an example to do thing that cargo test runner do, `cargo run --exampl
 The testcase of in the example will not in `#[cfg(test)]` or `#[test]` anymore, and use `#[test_with::runtime_*]`,
 the test runner will treat it as the test in Rust and also provide the same summary as `cargo test`.
 
-The `runtime` feature should be enabled and include as normal dependency, and also include the `libtest-with` with corresponding features in `Cargo.toml`.
+The `runtime` feature should be enabled and include as normal dependency( not dev-dependencies).
 ```toml
-test-with = { version = "0.15.0", features = ["runtime"] }
-libtest-with = { version = "0.8.1-14", features = ["net", "resource", "user", "executable"] }
+test-with = { version = "0.16.0", features = ["runtime"] }
 ```
 
 Create an example with the following runtime macros (`test_with::runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).
