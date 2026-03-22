@@ -47,34 +47,28 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_ips = vec![];
                 #(
-                    if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
+                    if test_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
                         missing_ips.push(#ips);
                     }
                 )*
                 match missing_ips.len() {
                     0 => {
                         #ident().await;
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following ips not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_ips[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following ips not response: \n{}\n", missing_ips.join(", "))) }),
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_ips = vec![];
                 #(
-                    if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
+                    if test_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
                         missing_ips.push(#ips);
                     }
                 )*
@@ -83,42 +77,29 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         if let Err(e) = #ident().await {
                             Err(format!("{e:?}").into())
                         } else {
-                            Ok(())
+                            Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following ips not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_ips[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following ips not response: \n{}\n", missing_ips.join(", "))) }),
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_ips = vec![];
                 #(
-                    if libtest_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
+                    if test_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
                         missing_ips.push(#ips);
                     }
                 )*
                 match missing_ips.len() {
                     0 => {
                         #ident();
-                        Ok(())
-                    }
-                    ,
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following ips not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_ips.join(", ")
-                    ).into()),
+                        Ok(test_with::Completion::Completed)
+                    },
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_ips[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following ips not response: \n{}\n", missing_ips.join(", "))) }),
                 }
             }
         },

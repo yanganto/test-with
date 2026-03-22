@@ -100,10 +100,10 @@ pub(crate) fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenS
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut incorrect_tzs = vec![];
                 let mut match_tz = false;
-                let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
+                let current_tz = test_with::chrono::Local::now().offset().local_minus_utc() / 60;
                 for tz in #attr_str.split(',') {
                     if let Ok(parsed_tz) = tz.parse::<i32>() {
                         match_tz |= current_tz == parsed_tz;
@@ -114,32 +114,21 @@ pub(crate) fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenS
 
                 if match_tz && incorrect_tzs.is_empty() {
                         #ident().await;
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                 } else if incorrect_tzs.len() == 1 {
-                    Err(
-                        format!("{}because timezone {} is incorrect",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
-                    ).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because timezone {} is incorrect", incorrect_tzs[0])) })
                 } else if incorrect_tzs.len() > 1 {
-                    Err(
-                        format!("{}because following timezones are incorrect:\n{:?}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
-                    ).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because following timezones are incorrect:\n{:?}\n", incorrect_tzs)) })
                 } else {
-                    Err(
-                        format!(
-                        "{}because the test case not run in following timezone:\n{}\n",
-                        libtest_with::RUNTIME_IGNORE_PREFIX,
-                        #attr_str
-                    ).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the test case not run in following timezone:\n{}\n", #attr_str)) })
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut incorrect_tzs = vec![];
                 let mut match_tz = false;
-                let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
+                let current_tz = test_with::chrono::Local::now().offset().local_minus_utc() / 60;
                 for tz in #attr_str.split(',') {
                     if let Ok(parsed_tz) = tz.parse::<i32>() {
                         match_tz |= current_tz == parsed_tz;
@@ -152,33 +141,22 @@ pub(crate) fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenS
                         if let Err(e) = #ident().await {
                             Err(format!("{e:?}").into())
                         } else {
-                            Ok(())
+                            Ok(test_with::Completion::Completed)
                         }
                 } else if incorrect_tzs.len() == 1 {
-                    Err(
-                        format!("{}because timezone {} is incorrect",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
-                    ).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because timezone {} is incorrect", incorrect_tzs[0])) })
                 } else if incorrect_tzs.len() > 1 {
-                    Err(
-                        format!("{}because following timezones are incorrect:\n{:?}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
-                    ).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because following timezones are incorrect:\n{:?}\n", incorrect_tzs)) })
                 } else {
-                    Err(
-                        format!(
-                        "{}because the test case not run in following timezone:\n{}\n",
-                        libtest_with::RUNTIME_IGNORE_PREFIX,
-                        #attr_str
-                    ).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the test case not run in following timezone:\n{}\n", #attr_str)) })
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut incorrect_tzs = vec![];
                 let mut match_tz = false;
-                let current_tz = libtest_with::chrono::Local::now().offset().local_minus_utc() / 60;
+                let current_tz = test_with::chrono::Local::now().offset().local_minus_utc() / 60;
                 for tz in #attr_str.split(',') {
                     if let Ok(parsed_tz) = tz.parse::<i32>() {
                         match_tz |= current_tz == parsed_tz;
@@ -189,33 +167,22 @@ pub(crate) fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenS
 
                 if match_tz && incorrect_tzs.is_empty() {
                         #ident();
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                 } else if incorrect_tzs.len() == 1 {
-                    Err(
-                        format!("{}because timezone {} is incorrect",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs[0]
-                    ).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because timezone {} is incorrect", incorrect_tzs[0])) })
                 } else if incorrect_tzs.len() > 1 {
-                    Err(
-                        format!("{}because following timezones are incorrect:\n{:?}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, incorrect_tzs
-                    ).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because following timezones are incorrect:\n{:?}\n", incorrect_tzs)) })
                 } else {
-                    Err(
-                        format!(
-                        "{}because the test case not run in following timezone:\n{}\n",
-                        libtest_with::RUNTIME_IGNORE_PREFIX,
-                        #attr_str
-                    ).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the test case not run in following timezone:\n{}\n", #attr_str)) })
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }

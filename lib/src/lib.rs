@@ -36,7 +36,6 @@
 //! ```toml
 //! [dependencies]
 //! test-with = { version = "*", default-features = false, features = ["runtime"] }
-//! libtest-with = { version = "0.8.1-14", features = ["net", "resource", "user", "executable", "timezone"] }
 //! ```
 //!
 //! ```rust
@@ -54,7 +53,7 @@
 pub use test_with_derive::*;
 
 #[cfg(feature = "runtime")]
-pub use libtest_mimic;
+pub use libtest_mimic::*;
 
 #[cfg(all(feature = "runtime", feature = "resource"))]
 pub use byte_unit;

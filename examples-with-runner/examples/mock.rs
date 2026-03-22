@@ -17,7 +17,7 @@ mod net {
                 .expect("failed to execute child");
             let mut count = 0;
             while count < 3 {
-                if libtest_with::reqwest::blocking::get("http://127.0.0.1:8000").is_ok() {
+                if test_with::reqwest::blocking::get("http://127.0.0.1:8000").is_ok() {
                     break;
                 }
                 std::thread::sleep(std::time::Duration::from_secs(1));

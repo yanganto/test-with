@@ -921,71 +921,68 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
                 );
-                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
+                let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
                 };
-                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                let swap_size_limitation = test_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
                 if  swap_size >= swap_size_limitation {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the swap less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the swap less than {}", #swap_limitation_str)) })
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
                 );
-                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
+                let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
                 };
-                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                let swap_size_limitation = test_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
                 if  swap_size >= swap_size_limitation {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because the swap less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the swap less than {}", #swap_limitation_str)) })
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
                 );
-                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
+                let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
                 };
-                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                let swap_size_limitation = test_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
                 if  swap_size >= swap_size_limitation {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the swap less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the swap less than {}", #swap_limitation_str)) })
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -1260,44 +1257,44 @@ pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream 
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 if let Some(msg) = #ignore_function() {
-                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(msg) })
                 } else {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 if let Some(msg) = #ignore_function() {
-                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(msg) })
                 } else {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 if let Some(msg) = #ignore_function() {
-                    Err(format!("{}{msg}", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                    Ok(test_with::Completion::Ignored { reason: Some(msg) })
                 } else {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -1517,7 +1514,7 @@ pub fn tokio_runner(input: TokenStream) -> TokenStream {
 ///                 .expect("failed to execute child");
 ///             let mut count = 0;
 ///             while count < 3 {
-///                 if libtest_with::reqwest::blocking::get("http://127.0.0.1:8000").is_ok() {
+///                 if test_with::reqwest::blocking::get("http://127.0.0.1:8000").is_ok() {
 ///                     break;
 ///                 }
 ///                 std::thread::sleep(std::time::Duration::from_secs(1));
@@ -1559,7 +1556,7 @@ pub fn tokio_runner(input: TokenStream) -> TokenStream {
 ///             .expect("failed to execute child");
 ///         let mut count = 0;
 ///         while count < 3 {
-///             if libtest_with::reqwest::blocking::get("http://127.0.0.1:8000").is_ok() {
+///             if test_with::reqwest::blocking::get("http://127.0.0.1:8000").is_ok() {
 ///                 break;
 ///             }
 ///             std::thread::sleep(std::time::Duration::from_secs(1));

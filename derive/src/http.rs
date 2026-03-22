@@ -60,9 +60,9 @@ pub(crate) fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStrea
     );
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::Client::new();
+                let client = test_with::reqwest::Client::new();
                 #(
                     if client.head(&format!("http://{}", #links)).send().await.is_err() {
                         missing_links.push(format!("http://{}", #links));
@@ -71,23 +71,17 @@ pub(crate) fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStrea
                 match missing_links.len() {
                     0 => {
                         #ident().await;
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::Client::new();
+                let client = test_with::reqwest::Client::new();
                 #(
                     if client.head(&format!("http://{}", #links)).send().await.is_err() {
                         missing_links.push(format!("http://{}", #links));
@@ -98,25 +92,18 @@ pub(crate) fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         if let Err(e) = #ident().await {
                             Err(format!("{e:?}").into())
                         } else {
-                            Ok(())
+                            Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::blocking::Client::new();
+                let client = test_with::reqwest::blocking::Client::new();
                 #(
                     if client.head(&format!("http://{}", #links)).send().is_err() {
                         missing_links.push(format!("http://{}", #links));
@@ -125,16 +112,10 @@ pub(crate) fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStrea
                 match missing_links.len() {
                     0 => {
                         #ident();
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
                 }
             }
         },
@@ -166,9 +147,9 @@ pub(crate) fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStre
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::Client::new();
+                let client = test_with::reqwest::Client::new();
                 #(
                     if client.head(&format!("https://{}", #links)).send().await.is_err() {
                         missing_links.push(format!("https://{}", #links));
@@ -177,23 +158,17 @@ pub(crate) fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStre
                 match missing_links.len() {
                     0 => {
                         #ident().await;
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::Client::new();
+                let client = test_with::reqwest::Client::new();
                 #(
                     if client.head(&format!("https://{}", #links)).send().await.is_err() {
                         missing_links.push(format!("https://{}", #links));
@@ -204,24 +179,18 @@ pub(crate) fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStre
                         if let Err(e) = #ident().await {
                             Err(format!("{e:?}").into())
                         } else {
-                            Ok(())
+                            Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_links = vec![];
-                let client = libtest_with::reqwest::blocking::Client::new();
+                let client = test_with::reqwest::blocking::Client::new();
                 #(
                     if client.head(&format!("https://{}", #links)).send().is_err() {
                         missing_links.push(format!("https://{}", #links));
@@ -230,16 +199,10 @@ pub(crate) fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStre
                 match missing_links.len() {
                     0 => {
                         #ident();
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because {} not response",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following links not response: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_links.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
                 }
             }
         },

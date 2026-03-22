@@ -77,61 +77,53 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
 
     let check_fn = match (has_or_cond, &sig.asyncness, &sig.output) {
         (true, Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 #(
-                    if libtest_with::which::which(#executables).is_ok() {
+                    if test_with::which::which(#executables).is_ok() {
                         #ident().await;
-                        return Ok(());
+                        return Ok(test_with::Completion::Completed);
                     }
                 )*
-                Err(format!("{}because none of executables can be found:\n{}\n",
-                    libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
+                Ok(test_with::Completion::Ignored { reason: Some(format!("because none of executables can be found:\n{}\n", attr_str)) })
             }
         },
         (false, Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_executables = vec![];
                 #(
-                    if libtest_with::which::which(#executables).is_err() {
+                    if test_with::which::which(#executables).is_err() {
                         missing_executables.push(#executables);
                     }
                 )*
                 match missing_executables.len() {
                     0 => {
                         #ident().await;
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because executable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following executables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because executable {} not found", missing_executables[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following executables not found:\n{}\n", missing_executables.join(", "))) }),
                 }
             }
         },
         (true, Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 #(
-                    if libtest_with::which::which(#executables).is_ok() {
+                    if test_with::which::which(#executables).is_ok() {
                         if let Err(e) = #ident().await {
                             return Err(format!("{e:?}").into());
                         } else {
-                            return Ok(());
+                            return Ok(test_with::Completion::Completed);
                         }
                     }
                 )*
-                Err(format!("{}because none of executables can be found:\n{}\n",
-                    libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
+                Ok(test_with::Completion::Ignored { reason: Some(format!("because none of executables can be found:\n{}\n", attr_str)) })
             }
         },
         (false, Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_executables = vec![];
                 #(
-                    if libtest_with::which::which(#executables).is_err() {
+                    if test_with::which::which(#executables).is_err() {
                         missing_executables.push(#executables);
                     }
                 )*
@@ -140,62 +132,49 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
                         if let Err(e) = #ident().await {
                             Err(format!("{e:?}").into())
                         } else {
-                            Ok(())
+                            Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Err(
-                        format!("{}because executable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following executables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because executable {} not found", missing_executables[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following executables not found:\n{}\n", missing_executables.join(", "))) }),
                 }
             }
         },
         (true, None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 #(
-                    if libtest_with::which::which(#executables).is_ok() {
+                    if test_with::which::which(#executables).is_ok() {
                         #ident();
-                        return Ok(());
+                        return Ok(test_with::Completion::Completed);
                     }
                 )*
-                Err(format!("{}because none of executables can be found:\n{}\n",
-                    libtest_with::RUNTIME_IGNORE_PREFIX, attr_str).into())
+                Ok(test_with::Completion::Ignored { reason: Some(format!("because none of executables can be found:\n{}\n", attr_str)) })
             }
         },
         (false, None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_executables = vec![];
                 #(
-                    if libtest_with::which::which(#executables).is_err() {
+                    if test_with::which::which(#executables).is_err() {
                         missing_executables.push(#executables);
                     }
                 )*
                 match missing_executables.len() {
                     0 => {
                         #ident();
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because executable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following executables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_executables.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because executable {} not found", missing_executables[0])) }),
+                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following executables not found:\n{}\n", missing_executables.join(", "))) }),
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
