@@ -6,22 +6,28 @@ pub(crate) fn runner(input: TokenStream) -> TokenStream {
     let input_str = input.to_string();
     let mod_names: Vec<syn::Ident> = input_str
         .split(",")
-        .map(|s| syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
+        .filter_map(|s| {
+            if s.is_empty() {
+                None
+            } else {
+                Some(syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
+            }
+        })
         .collect();
     quote::quote! {
         fn main() {
-            let args = libtest_with::Arguments::from_args();
+            let args = test_with::Arguments::from_args();
             let mut no_env_tests = Vec::new();
             #(
                 match #mod_names::_runtime_tests() {
                     (Some(env), tests) => {
-                        libtest_with::run(&args, tests).exit_if_failed();
+                        test_with::run(&args, tests).exit_if_failed();
                         drop(env);
                     },
                     (None, mut tests) => no_env_tests.append(&mut tests),
                 }
             )*
-            libtest_with::run(&args, no_env_tests).exit();
+            test_with::run(&args, no_env_tests).exit();
         }
     }
     .into()
@@ -31,7 +37,13 @@ pub(crate) fn tokio_runner(input: TokenStream) -> TokenStream {
     let input_str = input.to_string();
     let mod_names: Vec<syn::Ident> = input_str
         .split(",")
-        .map(|s| syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
+        .filter_map(|s| {
+            if s.is_empty() {
+                None
+            } else {
+                Some(syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
+            }
+        })
         .collect();
     quote::quote! {
         fn main() {
@@ -112,12 +124,12 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                         })
                         .collect();
                     quote::quote! {
-                        pub fn _runtime_tests() -> (Option<#test_env_type>, Vec<libtest_with::Trial>) {
-                            use libtest_with::Trial;
+                        pub fn _runtime_tests() -> (Option<#test_env_type>, Vec<test_with::Trial>) {
+                            use test_with::Trial;
                             (
                                 Some(#test_env_type::default()),
                                 vec![
-                                    #(Trial::test(#test_names, #check_names),)*
+                                    #(Trial::ignorable_test(#test_names, #check_names),)*
                                 ]
                             )
                         }
@@ -162,42 +174,52 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                             println!("running {} tests of {}\n", #total, stringify!(#ident));
                             #(
                                 print!("test {}::{} ... ", stringify!(#ident), #async_test_names);
-                                if let Err(e) = #async_check_names().await {
-                                    if let Some(msg) = e.message() {
-                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
-                                            println!("ignored, {}", msg[12..].to_string());
-                                            ignored += 1;
+                                match #async_check_names().await {
+                                    Ok(test_with::Completion::Completed) => {
+                                        println!("ok");
+                                        passed += 1;
+                                    },
+                                    Ok(test_with::Completion::Ignored{ reason }) => {
+                                        ignored += 1;
+                                        if let Some(msg) = reason {
+                                            println!("ignored, {msg:}");
                                         } else {
-                                            println!("FAILED, {msg}");
-                                            failed += 1;
+                                            println!("ignored");
                                         }
-                                    } else {
-                                        println!("FAILED");
+                                    },
+                                    Err(e) =>  {
                                         failed += 1;
+                                        if let Some(msg) = e.message() {
+                                            println!("FAILED, {msg:}");
+                                        } else {
+                                            println!("FAILED");
+                                        }
                                     }
-                                } else {
-                                    println!("ok");
-                                    passed += 1;
                                 }
                             )*
                             #(
                                 print!("test {}::{} ... ", stringify!(#ident), #sync_test_names);
-                                if let Err(e) = #sync_check_names() {
-                                    if let Some(msg) = e.message() {
-                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
-                                            println!("ignored, {}", msg[12..].to_string());
-                                            ignored += 1;
+                                match #sync_check_names() {
+                                    Ok(test_with::Completion::Completed) => {
+                                        println!("ok");
+                                        passed += 1;
+                                    },
+                                    Ok(test_with::Completion::Ignored{ reason }) => {
+                                        ignored += 1;
+                                        if let Some(msg) = reason {
+                                            println!("ignored, {msg:}");
                                         } else {
-                                            println!("FAILED, {msg}");
-                                            failed += 1;
+                                            println!("ignored");
                                         }
-                                    } else {
-                                        println!("FAILED");
+                                    },
+                                    Err(e) =>  {
                                         failed += 1;
+                                        if let Some(msg) = e.message() {
+                                            println!("FAILED, {msg:}");
+                                        } else {
+                                            println!("FAILED");
+                                        }
                                     }
-                                } else {
-                                    println!("ok");
-                                    passed += 1;
                                 }
                             )*
                             drop(env);
@@ -222,12 +244,12 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                         })
                         .collect();
                     quote::quote! {
-                        pub fn _runtime_tests() -> (Option<()>, Vec<libtest_with::Trial>) {
-                            use libtest_with::Trial;
+                        pub fn _runtime_tests() -> (Option<()>, Vec<test_with::Trial>) {
+                            use test_with::Trial;
                             (
                                 None,
                                 vec![
-                                    #(Trial::test(#test_names, #check_names),)*
+                                    #(Trial::ignorable_test(#test_names, #check_names),)*
                                 ]
                             )
                         }
@@ -271,42 +293,52 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                             println!("running {} tests of {}\n", #total, stringify!(#ident));
                             #(
                                 print!("test {}::{} ... ", stringify!(#ident), #async_test_names);
-                                if let Err(e) = #async_check_names().await {
-                                    if let Some(msg) = e.message() {
-                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
-                                            println!("ignored, {}", msg[12..].to_string());
-                                            ignored += 1;
+                                match #async_check_names().await {
+                                    Ok(test_with::Completion::Completed) => {
+                                        println!("ok");
+                                        passed += 1;
+                                    },
+                                    Ok(test_with::Completion::Ignored{ reason }) => {
+                                        ignored += 1;
+                                        if let Some(msg) = reason {
+                                            println!("ignored, {msg:}");
                                         } else {
-                                            println!("FAILED, {msg}");
-                                            failed += 1;
+                                            println!("ignored");
                                         }
-                                    } else {
-                                        println!("FAILED");
+                                    },
+                                    Err(e) =>  {
                                         failed += 1;
+                                        if let Some(msg) = e.message() {
+                                            println!("FAILED, {msg}");
+                                        } else {
+                                            println!("FAILED");
+                                        }
                                     }
-                                } else {
-                                    println!("ok");
-                                    passed += 1;
                                 }
                             )*
                             #(
                                 print!("test {}::{} ... ", stringify!(#ident), #sync_test_names);
-                                if let Err(e) = #sync_check_names() {
-                                    if let Some(msg) = e.message() {
-                                        if msg.starts_with(libtest_with::RUNTIME_IGNORE_PREFIX) {
-                                            println!("ignored, {}", msg[12..].to_string());
-                                            ignored += 1;
+                                match #sync_check_names() {
+                                    Ok(test_with::Completion::Completed) => {
+                                        println!("ok");
+                                        passed += 1;
+                                    },
+                                    Ok(test_with::Completion::Ignored{ reason }) => {
+                                        ignored += 1;
+                                        if let Some(msg) = reason {
+                                            println!("ignored, {msg:}");
                                         } else {
-                                            println!("FAILED, {msg}");
-                                            failed += 1;
+                                            println!("ignored");
                                         }
-                                    } else {
-                                        println!("FAILED");
+                                    },
+                                    Err(e) =>  {
                                         failed += 1;
+                                        if let Some(msg) = e.message() {
+                                            println!("FAILED, {msg}");
+                                        } else {
+                                            println!("FAILED");
+                                        }
                                     }
-                                } else {
-                                    println!("ok");
-                                    passed += 1;
                                 }
                             )*
                             if failed > 0 {

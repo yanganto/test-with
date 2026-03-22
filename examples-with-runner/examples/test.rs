@@ -54,7 +54,7 @@ mod file {
 #[test_with::module]
 mod path {
     #[test_with::runtime_path(/no_existing)]
-    fn test_not_works() {
+    fn path_test_works() {
         assert!(true);
     }
 }
@@ -156,7 +156,7 @@ fn something_happened() -> Option<String> {
 #[test_with::module]
 mod custom_mod {
     #[test_with::runtime_ignore_if(something_happened)]
-    fn test_ignored() {
+    fn customed_test_ignored() {
         assert!(false);
     }
 }

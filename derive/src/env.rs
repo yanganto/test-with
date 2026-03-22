@@ -49,7 +49,7 @@ pub(crate) fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_vars = vec![];
                 #(
                     if std::env::var(#var_names).is_err() {
@@ -59,21 +59,15 @@ pub(crate) fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream
                 match missing_vars.len() {
                     0 => {
                         let _ = #ident().await;
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because variable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} not found", missing_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables not found: \n{}\n", missing_vars.join(", ")))),
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_vars = vec![];
                 #(
                     if std::env::var(#var_names).is_err() {
@@ -85,22 +79,16 @@ pub(crate) fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream
                         if let Err(e) = #ident().await {
                             Err(format!("{e:?}").into())
                         } else {
-                            Ok(())
+                            Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Err(
-                        format!("{}because variable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} not found", missing_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables not found: \n{}\n", missing_vars.join(", ")))),
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_vars = vec![];
                 #(
                     if std::env::var(#var_names).is_err() {
@@ -110,25 +98,19 @@ pub(crate) fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream
                 match missing_vars.len() {
                     0 => {
                         #ident();
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because variable {} not found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables not found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_vars.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} not found", missing_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables not found: \n{}\n", missing_vars.join(", ")))),
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -177,7 +159,7 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut should_no_exist_vars = vec![];
                 #(
                     if std::env::var(#var_names).is_ok() {
@@ -187,21 +169,15 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
                 match should_no_exist_vars.len() {
                     0 => {
                         #ident().await;
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because variable {} found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} found", should_no_exist_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut should_no_exist_vars = vec![];
                 #(
                     if std::env::var(#var_names).is_ok() {
@@ -213,22 +189,16 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
                         if let Err(e) = #ident().await {
                             Err(format!("{e:?}").into())
                         } else {
-                            Ok(())
+                            Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Err(
-                        format!("{}because variable {} found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} found", should_no_exist_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut should_no_exist_vars = vec![];
                 #(
                     if std::env::var(#var_names).is_ok() {
@@ -238,25 +208,19 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
                 match should_no_exist_vars.len() {
                     0 => {
                         #ident();
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because variable {} found",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following variables found:\n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, should_no_exist_vars.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} found", should_no_exist_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }

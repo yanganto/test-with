@@ -87,71 +87,68 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
                 );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
+                let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
                 };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                let mem_size_limitation = test_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
                 if  mem_size >= mem_size_limitation {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
                 );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
+                let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
                 };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                let mem_size_limitation = test_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
                 if  mem_size >= mem_size_limitation {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
                 );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
+                let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
                 };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                let mem_size_limitation = test_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
                 if  mem_size >= mem_size_limitation {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -177,71 +174,68 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
                 );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
+                let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
                 };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                let mem_size_limitation = test_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
                 if  mem_size >= mem_size_limitation {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
                 );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
+                let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
                 };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                let mem_size_limitation = test_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
                 if  mem_size >= mem_size_limitation {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
                 );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
+                let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
                 };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                let mem_size_limitation = test_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
                 if  mem_size >= mem_size_limitation {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -267,71 +261,68 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
                 );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
+                let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
                 };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                let mem_size_limitation = test_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
                 if  mem_size >= mem_size_limitation {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
                 );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
+                let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
                 };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                let mem_size_limitation = test_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
                 if  mem_size >= mem_size_limitation {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
                 );
-                let mem_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
+                let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
                 };
-                let mem_size_limitation = libtest_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
+                let mem_size_limitation = test_with::byte_unit::Byte::parse_str(#mem_limitation_str, true).expect("mem limitation should correct");
                 if  mem_size >= mem_size_limitation {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the memory less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #mem_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -357,71 +348,68 @@ pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> Token
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
                 );
-                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
+                let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
                 };
-                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                let swap_size_limitation = test_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
                 if swap_size >= swap_size_limitation {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the swap less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the swap less than {}", #swap_limitation_str)))
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
                 );
-                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
+                let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
                 };
-                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                let swap_size_limitation = test_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
                 if swap_size >= swap_size_limitation {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because the swap less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the swap less than {}", #swap_limitation_str)))
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let sys = libtest_with::sysinfo::System::new_with_specifics(
-                    libtest_with::sysinfo::RefreshKind::nothing().with_memory(libtest_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let sys = test_with::sysinfo::System::new_with_specifics(
+                    test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
                 );
-                let swap_size = match libtest_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
+                let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
                 };
-                let swap_size_limitation = libtest_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
+                let swap_size_limitation = test_with::byte_unit::Byte::parse_str(#swap_limitation_str, true).expect("swap limitation should correct");
                 if swap_size >= swap_size_limitation {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the swap less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #swap_limitation_str).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the swap less than {}", #swap_limitation_str)))
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -448,47 +436,44 @@ pub(crate) fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenS
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get() >= #core_limitation {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                if test_with::num_cpus::get() >= #core_limitation {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the cpu core less than {}", #core_limitation)))
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get() >= #core_limitation {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                if test_with::num_cpus::get() >= #core_limitation {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because the cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the cpu core less than {}", #core_limitation)))
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get() >= #core_limitation {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                if test_with::num_cpus::get() >= #core_limitation {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the cpu core less than {}", #core_limitation)))
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -515,47 +500,44 @@ pub(crate) fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> To
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get_physical() >= #core_limitation {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                if test_with::num_cpus::get_physical() >= #core_limitation {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the physical cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the physical cpu core less than {}", #core_limitation)))
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get_physical() >= #core_limitation {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                if test_with::num_cpus::get_physical() >= #core_limitation {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because the physical cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the physical cpu core less than {}", #core_limitation)))
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if libtest_with::num_cpus::get_physical() >= #core_limitation {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                if test_with::num_cpus::get_physical() >= #core_limitation {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because the physical cpu core less than {}",
-                            libtest_with::RUNTIME_IGNORE_PREFIX, #core_limitation).into())
+                    Ok(test_with::Completion::ignored_with(format!("because the physical cpu core less than {}", #core_limitation)))
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }

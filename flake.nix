@@ -24,7 +24,9 @@
 
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
           cargo login $1
-          cargo publish
+          cargo publish -p test-with-derive || echo "publish test-with-derive fail"
+          sleep 10
+          cargo publish -p test-with
         '';
         updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
           dr -p ./Cargo.toml
@@ -34,7 +36,7 @@
           fi
         '';
         featureTestScript = pkgs.writeShellScriptBin "feature-test" ''
-          set -e
+          set -e -x
           cargo run --no-default-features --features=http --example=http
           cargo run --no-default-features --features=icmp --example=icmp
           cargo run --no-default-features --example=tcp
@@ -48,7 +50,7 @@
           cargo hack test --examples
 
           # runtime ignore example
-          cd examples/runner
+          cd examples-with-runner
           cargo run --example test
           cargo run --example mock
           cargo run --example mock2
@@ -62,7 +64,7 @@
         devShells =  {
           default = mkShell {
             buildInputs = [
-              rust-bin.stable.${cargoTomlConfig.package.rust-version}.minimal
+              rust-bin.stable.${cargoTomlConfig.workspace.package.rust-version}.minimal
               openssl
               pkg-config
             ];
@@ -70,7 +72,7 @@
           
           ci = mkShell {
             buildInputs = [
-              rust-bin.stable.${cargoTomlConfig.package.rust-version}.default
+              rust-bin.stable.${cargoTomlConfig.workspace.package.rust-version}.default
               openssl
               pkg-config
 

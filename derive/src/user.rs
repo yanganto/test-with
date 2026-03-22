@@ -79,44 +79,44 @@ pub(crate) fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStre
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if 0 == libtest_with::uzers::get_current_uid() {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                if 0 == test_with::uzers::get_current_uid() {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                    Ok(test_with::Completion::ignored_with("because this case should run with root".to_string()))
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if 0 == libtest_with::uzers::get_current_uid() {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                if 0 == test_with::uzers::get_current_uid() {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                    Ok(test_with::Completion::ignored_with("because this case should run with root".to_string()))
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                if 0 == libtest_with::uzers::get_current_uid() {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                if 0 == test_with::uzers::get_current_uid() {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because this case should run with root", libtest_with::RUNTIME_IGNORE_PREFIX).into())
+                    Ok(test_with::Completion::ignored_with("because this case should run with root".to_string()))
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -143,9 +143,9 @@ pub(crate) fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStre
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let current_user_id = libtest_with::uzers::get_current_uid();
-                let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let current_user_id = test_with::uzers::get_current_uid();
+                let in_group = match test_with::uzers::get_user_by_uid(current_user_id) {
                     Some(user) => {
                         let mut in_group = false;
                         for group in user.groups().expect("user not found") {
@@ -160,17 +160,16 @@ pub(crate) fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStre
                 };
                 if in_group {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because this case should run user in group {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run user in group {}", #group_name)))
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let current_user_id = libtest_with::uzers::get_current_uid();
-                let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let current_user_id = test_with::uzers::get_current_uid();
+                let in_group = match test_with::uzers::get_user_by_uid(current_user_id) {
                     Some(user) => {
                         let mut in_group = false;
                         for group in user.groups().expect("user not found") {
@@ -187,18 +186,17 @@ pub(crate) fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStre
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because this case should run user in group {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run user in group {}", #group_name)))
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let current_user_id = libtest_with::uzers::get_current_uid();
-                let in_group = match libtest_with::uzers::get_user_by_uid(current_user_id) {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let current_user_id = test_with::uzers::get_current_uid();
+                let in_group = match test_with::uzers::get_user_by_uid(current_user_id) {
                     Some(user) => {
                         let mut in_group = false;
                         for group in user.groups().expect("user not found") {
@@ -213,19 +211,18 @@ pub(crate) fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStre
                 };
                 if in_group {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because this case should run user in group {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #group_name).into())
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run user in group {}", #group_name)))
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -252,23 +249,22 @@ pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let is_user = match libtest_with::uzers::get_current_username() {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let is_user = match test_with::uzers::get_current_username() {
                     Some(uname) => uname.to_string_lossy() == #user_name,
                     None => false,
                 };
                 if is_user {
                     #ident().await;
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because this case should run with user {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run with user {}", #user_name)))
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let is_user = match libtest_with::uzers::get_current_username() {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let is_user = match test_with::uzers::get_current_username() {
                     Some(uname) => uname.to_string_lossy() == #user_name,
                     None => false,
                 };
@@ -276,35 +272,33 @@ pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
                     } else {
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Err(format!("{}because this case should run with user {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run with user {}", #user_name)))
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
-                let is_user = match libtest_with::uzers::get_current_username() {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
+                let is_user = match test_with::uzers::get_current_username() {
                     Some(uname) => uname.to_string_lossy() == #user_name,
                     None => false,
                 };
                 if is_user {
                     #ident();
-                    Ok(())
+                    Ok(test_with::Completion::Completed)
                 } else {
-                    Err(format!("{}because this case should run with user {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, #user_name).into())
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run with user {}", #user_name)))
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }

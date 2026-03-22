@@ -60,7 +60,7 @@ pub(crate) fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStrea
     );
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_files = vec![];
                 #(
                     if !std::path::Path::new(#files.trim_matches('"')).is_file() {
@@ -71,21 +71,15 @@ pub(crate) fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStrea
                 match missing_files.len() {
                     0 => {
                         #ident().await;
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because file not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following files not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because file not found: {}", missing_files[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following files not found: \n{}\n", missing_files.join(", ")))),
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_files = vec![];
                 #(
                     if !std::path::Path::new(#files.trim_matches('"')).is_file() {
@@ -98,22 +92,16 @@ pub(crate) fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         if let Err(e) = #ident().await {
                             Err(format!("{e:?}").into())
                         } else {
-                            Ok(())
+                            Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Err(
-                        format!("{}because file not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following files not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because file not found: {}", missing_files[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following files not found: \n{}\n", missing_files.join(", ")))),
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_files = vec![];
                 #(
                     if !std::path::Path::new(#files.trim_matches('"')).is_file() {
@@ -124,25 +112,19 @@ pub(crate) fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStrea
                 match missing_files.len() {
                     0 => {
                         #ident();
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because file not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following files not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_files.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because file not found: {}", missing_files[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following files not found: \n{}\n", missing_files.join(", ")))),
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
@@ -165,7 +147,7 @@ pub(crate) fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStrea
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_paths = vec![];
                 #(
                     if std::fs::metadata(#paths.trim_matches('"')).is_err() {
@@ -176,21 +158,15 @@ pub(crate) fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStrea
                 match missing_paths.len() {
                     0 => {
                         #ident().await;
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because path not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following paths not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because path not found: {}", missing_paths[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following paths not found: \n{}\n", missing_paths.join(", ")))),
                 }
             }
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
-            async fn #check_ident() -> Result<(), libtest_with::Failed> {
+            async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_paths = vec![];
                 #(
                     if std::fs::metadata(#paths.trim_matches('"')).is_err() {
@@ -203,22 +179,16 @@ pub(crate) fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         if let Err(e) = #ident().await {
                             Err(format!("{e:?}").into())
                         } else {
-                            Ok(())
+                            Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Err(
-                        format!("{}because path not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following paths not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because path not found: {}", missing_paths[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following paths not found: \n{}\n", missing_paths.join(", ")))),
                 }
             }
         },
         (None, _) => quote::quote! {
-            fn #check_ident() -> Result<(), libtest_with::Failed> {
+            fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_paths = vec![];
                 #(
                     if std::fs::metadata(#paths.trim_matches('"')).is_err() {
@@ -229,25 +199,19 @@ pub(crate) fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStrea
                 match missing_paths.len() {
                     0 => {
                         #ident();
-                        Ok(())
+                        Ok(test_with::Completion::Completed)
                     },
-                    1 => Err(
-                        format!("{}because path not found: {}",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths[0]
-                    ).into()),
-                    _ => Err(
-                        format!("{}because following paths not found: \n{}\n",
-                                libtest_with::RUNTIME_IGNORE_PREFIX, missing_paths.join(", ")
-                    ).into()),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because path not found: {}", missing_paths[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following paths not found: \n{}\n", missing_paths.join(", ")))),
                 }
             }
         },
     };
 
     quote::quote! {
-            #check_fn
-            #(#attrs)*
-            #vis #sig #block
+        #check_fn
+        #(#attrs)*
+        #vis #sig #block
     }
     .into()
 }
