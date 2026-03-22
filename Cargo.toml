@@ -6,6 +6,7 @@ resolver = "2"
 version = "0.16.0"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
+description = "A lib help you run test with condition"
 license = "MIT"
 repository = "https://github.com/yanganto/test-with"
 keywords = [ "testing", "condition", "toggle", "integration", "ignore" ]

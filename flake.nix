@@ -24,7 +24,9 @@
 
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
           cargo login $1
-          cargo publish
+          cargo publish -p test-with-derive || echo "publish test-with-derive fail"
+          sleep 10
+          cargo publish -p test-with
         '';
         updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
           dr -p ./Cargo.toml
