@@ -38,7 +38,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43d5b281e737544384e969a5ccad3f1cdd24b48086a0fc1b2a5262a26b8f4f4a"
 dependencies = [
  "anstyle",
- "anstyle-parse",
+ "anstyle-parse 0.2.7",
+ "anstyle-query",
+ "anstyle-wincon",
+ "colorchoice",
+ "is_terminal_polyfill",
+ "utf8parse",
+]
+
+[[package]]
+name = "anstream"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "824a212faf96e9acacdbd09febd34438f8f711fb84e09a8916013cd7815ca28d"
+dependencies = [
+ "anstyle",
+ "anstyle-parse 1.0.0",
  "anstyle-query",
  "anstyle-wincon",
  "colorchoice",
@@ -57,6 +72,15 @@ name = "anstyle-parse"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7644824f0aa2c7b9384579234ef10eb7efb6a0deb83f9630a49594dd9c15c2"
+dependencies = [
+ "utf8parse",
+]
+
+[[package]]
+name = "anstyle-parse"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52ce7f38b242319f7cabaa6813055467063ecdc9d355bbb4ce0c68908cd8130e"
 dependencies = [
  "utf8parse",
 ]
@@ -273,7 +297,7 @@ version = "4.5.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59a20016a20a3da95bef50ec7238dbd09baeef4311dcdd38ec15aba69812fb61"
 dependencies = [
- "anstream",
+ "anstream 0.6.21",
  "anstyle",
  "clap_lex",
  "strsim",
@@ -915,12 +939,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
 
 [[package]]
+name = "libtest-mimic"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14e6ba06f0ade6e504aff834d7c34298e5155c6baca353cc6a4aaff2f9fd7f33"
+dependencies = [
+ "anstream 1.0.0",
+ "anstyle",
+ "clap",
+ "escape8259",
+]
+
+[[package]]
 name = "libtest-with"
 version = "0.8.1-14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "748af0d6685186323ba6b8a35667d6d6ba821a67b9c893bfb83dc10d5281ffdf"
 dependencies = [
- "anstream",
+ "anstream 0.6.21",
  "anstyle",
  "byte-unit",
  "chrono",
@@ -1923,11 +1959,30 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "test-with"
-version = "0.15.8"
+version = "0.16.0"
 dependencies = [
  "byte-unit",
  "chrono",
+ "libtest-mimic",
  "libtest-with",
+ "num_cpus",
+ "ping",
+ "reqwest",
+ "rstest",
+ "serial_test",
+ "sysinfo",
+ "test-with-derive",
+ "tokio",
+ "uzers 0.11.3",
+ "which",
+]
+
+[[package]]
+name = "test-with-derive"
+version = "0.16.0"
+dependencies = [
+ "byte-unit",
+ "chrono",
  "num_cpus",
  "ping",
  "proc-macro-error2",
@@ -1935,13 +1990,19 @@ dependencies = [
  "quote",
  "regex",
  "reqwest",
- "rstest",
- "serial_test",
  "syn 2.0.114",
  "sysinfo",
- "tokio",
  "uzers 0.11.3",
  "which",
+]
+
+[[package]]
+name = "test-with-runner"
+version = "0.1.0"
+dependencies = [
+ "libtest-with",
+ "test-with",
+ "tokio",
 ]
 
 [[package]]

@@ -1,0 +1,46 @@
+[package]
+name = "test-with-derive"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A lib help you run test with condition"
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro-error2 = "2.0"
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = [ "full" ] }
+regex = { version = "1" }
+
+reqwest = { version = "0.13", features = ["blocking"], optional = true }
+ping = { version = "0.7.1", optional = true }
+sysinfo = { version = "0.38", optional = true }
+byte-unit = { version = "5.0", optional = true }
+num_cpus = { version = "1.13", optional = true }
+which = { version = "8.0", optional = true }
+chrono = { version = "0.4", optional = true }
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+uzers = { version = "0.11.3", optional = true }
+
+[features]
+default = ["net", "resource", "user", "executable", "timezone"]
+ign-msg = []
+
+runtime = []
+net = ["http", "icmp"]
+http = ["reqwest"]
+icmp = ["ping"]
+
+resource = ["sysinfo", "byte-unit", "num_cpus"]
+user = ["uzers"]
+executable = ["which"]
+timezone = ["chrono"]

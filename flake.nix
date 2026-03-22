@@ -48,7 +48,7 @@
           cargo hack test --examples
 
           # runtime ignore example
-          cd examples/runner
+          cd examples-with-runner
           cargo run --example test
           cargo run --example mock
           cargo run --example mock2
@@ -62,7 +62,7 @@
         devShells =  {
           default = mkShell {
             buildInputs = [
-              rust-bin.stable.${cargoTomlConfig.package.rust-version}.minimal
+              rust-bin.stable.${cargoTomlConfig.workspace.package.rust-version}.minimal
               openssl
               pkg-config
             ];
@@ -70,7 +70,7 @@
           
           ci = mkShell {
             buildInputs = [
-              rust-bin.stable.${cargoTomlConfig.package.rust-version}.default
+              rust-bin.stable.${cargoTomlConfig.workspace.package.rust-version}.default
               openssl
               pkg-config
 

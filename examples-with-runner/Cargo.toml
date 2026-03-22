@@ -1,9 +1,9 @@
 [package]
-name = "runner"
+name = "test-with-runner"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-test-with = { path = "../../", features = ["runtime"] }
+test-with = { path = "../lib", features = ["runtime"] }
 libtest-with = { version = "0.8.1-14", features = ["net", "resource", "user", "executable", "timezone"] }
 tokio = "1.45.1"
