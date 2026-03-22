@@ -306,7 +306,7 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                             )*
                             #(
                                 print!("test {}::{} ... ", stringify!(#ident), #sync_test_names);
-                                match #sync_check_names().await {
+                                match #sync_check_names() {
                                     Ok(test_with::Completion::Completed) => {
                                         println!("ok");
                                         passed += 1;

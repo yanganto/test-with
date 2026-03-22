@@ -61,8 +61,8 @@ pub(crate) fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream
                         let _ = #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because variable {} not found", missing_vars[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following variables not found: \n{}\n", missing_vars.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} not found", missing_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables not found: \n{}\n", missing_vars.join(", ")))),
                 }
             }
         },
@@ -82,8 +82,8 @@ pub(crate) fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because variable {} not found", missing_vars[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following variables not found: \n{}\n", missing_vars.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} not found", missing_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables not found: \n{}\n", missing_vars.join(", ")))),
                 }
             }
         },
@@ -100,8 +100,8 @@ pub(crate) fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because variable {} not found", missing_vars[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following variables not found: \n{}\n", missing_vars.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} not found", missing_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables not found: \n{}\n", missing_vars.join(", ")))),
                 }
             }
         },
@@ -171,8 +171,8 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because variable {} found", should_no_exist_vars[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignore_with(format!("because variable {} found", should_no_exist_vars[0]))),
+                    _ => Ok(test_with::Completion::ignore_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
                 }
             }
         },
@@ -192,8 +192,8 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because variable {} found", should_no_exist_vars[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignore_with(format!("because variable {} found", should_no_exist_vars[0]))),
+                    _ => Ok(test_with::Completion::ignore_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
                 }
             }
         },
@@ -210,8 +210,8 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because variable {} found", should_no_exist_vars[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignore_with(format!("because variable {} found", should_no_exist_vars[0]))),
+                    _ => Ok(test_with::Completion::ignore_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
                 }
             }
         },

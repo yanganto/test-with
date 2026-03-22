@@ -70,7 +70,8 @@
           
           ci = mkShell {
             buildInputs = [
-              rust-bin.stable.${cargoTomlConfig.workspace.package.rust-version}.default
+              # rust-bin.stable.${cargoTomlConfig.workspace.package.rust-version}.default
+              rust-bin.nightly.latest.default
               openssl
               pkg-config
 

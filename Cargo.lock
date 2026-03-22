@@ -951,26 +951,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libtest-with"
-version = "0.8.1-14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "748af0d6685186323ba6b8a35667d6d6ba821a67b9c893bfb83dc10d5281ffdf"
-dependencies = [
- "anstream 0.6.21",
- "anstyle",
- "byte-unit",
- "chrono",
- "clap",
- "escape8259",
- "num_cpus",
- "ping",
- "reqwest",
- "sysinfo",
- "uzers 0.12.2",
- "which",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1964,7 +1944,6 @@ dependencies = [
  "byte-unit",
  "chrono",
  "libtest-mimic",
- "libtest-with",
  "num_cpus",
  "ping",
  "reqwest",
@@ -1973,7 +1952,7 @@ dependencies = [
  "sysinfo",
  "test-with-derive",
  "tokio",
- "uzers 0.11.3",
+ "uzers",
  "which",
 ]
 
@@ -1992,7 +1971,7 @@ dependencies = [
  "reqwest",
  "syn 2.0.114",
  "sysinfo",
- "uzers 0.11.3",
+ "uzers",
  "which",
 ]
 
@@ -2275,16 +2254,6 @@ name = "uzers"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76d283dc7e8c901e79e32d077866eaf599156cbf427fffa8289aecc52c5c3f63"
-dependencies = [
- "libc",
- "log",
-]
-
-[[package]]
-name = "uzers"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b8275fb1afee25b4111d2dc8b5c505dbbc4afd0b990cb96deb2d88bff8be18d"
 dependencies = [
  "libc",
  "log",

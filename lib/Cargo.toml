@@ -12,7 +12,6 @@ rust-version.workspace = true
 
 [dependencies]
 test-with-derive = { path = "../derive" }
-libtest-with = { version = "0.8.1-14", features = ["net", "resource", "user", "executable", "timezone"] }
 
 reqwest = { version = "0.13", features = ["blocking"], optional = true }
 ping = { version = "0.7.1", optional = true }
@@ -43,5 +42,4 @@ timezone = ["test-with-derive/timezone", "chrono"]
 [dev-dependencies]
 tokio = { version = "1.38.0", features = ["rt", "rt-multi-thread", "macros"] }
 serial_test = "3.1.1"
-libtest-with = { version = "0.8.1-14", features = ["net", "resource", "user", "executable", "timezone"] }
 rstest = "0.26.1"
