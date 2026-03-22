@@ -73,8 +73,8 @@ pub(crate) fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_links[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following links not response: \n{}\n", missing_links.join(", ")))),
                 }
             }
         },
@@ -95,8 +95,8 @@ pub(crate) fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStrea
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_links[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following links not response: \n{}\n", missing_links.join(", ")))),
                 }
             }
         },
@@ -114,8 +114,8 @@ pub(crate) fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_links[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following links not response: \n{}\n", missing_links.join(", ")))),
                 }
             }
         },
@@ -160,8 +160,8 @@ pub(crate) fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStre
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_links[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following links not response: \n{}\n", missing_links.join(", ")))),
                 }
             }
         },
@@ -182,8 +182,8 @@ pub(crate) fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStre
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_links[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following links not response: \n{}\n", missing_links.join(", ")))),
                 }
             }
         },
@@ -201,8 +201,8 @@ pub(crate) fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStre
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_links[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following links not response: \n{}\n", missing_links.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_links[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following links not response: \n{}\n", missing_links.join(", ")))),
                 }
             }
         },

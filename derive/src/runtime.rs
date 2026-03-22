@@ -6,7 +6,13 @@ pub(crate) fn runner(input: TokenStream) -> TokenStream {
     let input_str = input.to_string();
     let mod_names: Vec<syn::Ident> = input_str
         .split(",")
-        .map(|s| syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
+        .filter_map(|s| {
+            if s.is_empty() {
+                None
+            } else {
+                Some(syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
+            }
+        })
         .collect();
     quote::quote! {
         fn main() {
@@ -31,7 +37,13 @@ pub(crate) fn tokio_runner(input: TokenStream) -> TokenStream {
     let input_str = input.to_string();
     let mod_names: Vec<syn::Ident> = input_str
         .split(",")
-        .map(|s| syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
+        .filter_map(|s| {
+            if s.is_empty() {
+                None
+            } else {
+                Some(syn::Ident::new(s.trim(), proc_macro2::Span::call_site()))
+            }
+        })
         .collect();
     quote::quote! {
         fn main() {
@@ -167,10 +179,10 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                         println!("ok");
                                         passed += 1;
                                     },
-                                    Ok(test_with::Completion::Ignore( reason )) => {
+                                    Ok(test_with::Completion::Ignored{ reason }) => {
                                         ignored += 1;
                                         if let Some(msg) = reason {
-                                            println!("ignored, {reason:}");
+                                            println!("ignored, {msg:}");
                                         } else {
                                             println!("ignored");
                                         }
@@ -178,7 +190,7 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                     Err(e) =>  {
                                         failed += 1;
                                         if let Some(msg) = e.message() {
-                                            println!("FAILED, {msg}");
+                                            println!("FAILED, {msg:}");
                                         } else {
                                             println!("FAILED");
                                         }
@@ -192,10 +204,10 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                         println!("ok");
                                         passed += 1;
                                     },
-                                    Ok(test_with::Completion::Ignore( reason )) => {
+                                    Ok(test_with::Completion::Ignored{ reason }) => {
                                         ignored += 1;
                                         if let Some(msg) = reason {
-                                            println!("ignored, {reason:}");
+                                            println!("ignored, {msg:}");
                                         } else {
                                             println!("ignored");
                                         }
@@ -203,7 +215,7 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                     Err(e) =>  {
                                         failed += 1;
                                         if let Some(msg) = e.message() {
-                                            println!("FAILED, {msg}");
+                                            println!("FAILED, {msg:}");
                                         } else {
                                             println!("FAILED");
                                         }
@@ -286,10 +298,10 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                         println!("ok");
                                         passed += 1;
                                     },
-                                    Ok(test_with::Completion::Ignore( reason )) => {
+                                    Ok(test_with::Completion::Ignored{ reason }) => {
                                         ignored += 1;
                                         if let Some(msg) = reason {
-                                            println!("ignored, {reason:}");
+                                            println!("ignored, {msg:}");
                                         } else {
                                             println!("ignored");
                                         }
@@ -311,10 +323,10 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                                         println!("ok");
                                         passed += 1;
                                     },
-                                    Ok(test_with::Completion::Ignore( reason )) => {
+                                    Ok(test_with::Completion::Ignored{ reason }) => {
                                         ignored += 1;
                                         if let Some(msg) = reason {
-                                            println!("ignored, {reason:}");
+                                            println!("ignored, {msg:}");
                                         } else {
                                             println!("ignored");
                                         }

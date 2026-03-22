@@ -84,7 +84,7 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
                         return Ok(test_with::Completion::Completed);
                     }
                 )*
-                Ok(test_with::Completion::Ignored { reason: Some(format!("because none of executables can be found:\n{}\n", attr_str)) })
+                Ok(test_with::Completion::ignored_with(format!("because none of executables can be found:\n{}\n", attr_str)))
             }
         },
         (false, Some(_), ReturnType::Default) => quote::quote! {
@@ -100,8 +100,8 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because executable {} not found", missing_executables[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following executables not found:\n{}\n", missing_executables.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because executable {} not found", missing_executables[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following executables not found:\n{}\n", missing_executables.join(", ")))),
                 }
             }
         },
@@ -116,7 +116,7 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
                         }
                     }
                 )*
-                Ok(test_with::Completion::Ignored { reason: Some(format!("because none of executables can be found:\n{}\n", attr_str)) })
+                Ok(test_with::Completion::ignored_with(format!("because none of executables can be found:\n{}\n", attr_str)))
             }
         },
         (false, Some(_), ReturnType::Type(_, _)) => quote::quote! {
@@ -135,8 +135,8 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because executable {} not found", missing_executables[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following executables not found:\n{}\n", missing_executables.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because executable {} not found", missing_executables[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following executables not found:\n{}\n", missing_executables.join(", ")))),
                 }
             }
         },
@@ -148,7 +148,7 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
                         return Ok(test_with::Completion::Completed);
                     }
                 )*
-                Ok(test_with::Completion::Ignored { reason: Some(format!("because none of executables can be found:\n{}\n", attr_str)) })
+                Ok(test_with::Completion::ignored_with(format!("because none of executables can be found:\n{}\n", attr_str)))
             }
         },
         (false, None, _) => quote::quote! {
@@ -164,8 +164,8 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because executable {} not found", missing_executables[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following executables not found:\n{}\n", missing_executables.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because executable {} not found", missing_executables[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following executables not found:\n{}\n", missing_executables.join(", ")))),
                 }
             }
         },

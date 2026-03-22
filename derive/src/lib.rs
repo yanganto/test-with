@@ -934,7 +934,7 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the swap less than {}", #swap_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the swap less than {}", #swap_limitation_str)))
                 }
             }
         },
@@ -955,7 +955,7 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the swap less than {}", #swap_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the swap less than {}", #swap_limitation_str)))
                 }
             }
         },
@@ -973,7 +973,7 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the swap less than {}", #swap_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the swap less than {}", #swap_limitation_str)))
                 }
             }
         },
@@ -1259,7 +1259,7 @@ pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream 
         (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 if let Some(msg) = #ignore_function() {
-                    Ok(test_with::Completion::Ignored { reason: Some(msg) })
+                    Ok(test_with::Completion::ignored_with(msg))
                 } else {
                     #ident().await;
                     Ok(test_with::Completion::Completed)
@@ -1269,7 +1269,7 @@ pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream 
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 if let Some(msg) = #ignore_function() {
-                    Ok(test_with::Completion::Ignored { reason: Some(msg) })
+                    Ok(test_with::Completion::ignored_with(msg))
                 } else {
                     if let Err(e) = #ident().await {
                         Err(format!("{e:?}").into())
@@ -1282,7 +1282,7 @@ pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream 
         (None, _) => quote::quote! {
             fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 if let Some(msg) = #ignore_function() {
-                    Ok(test_with::Completion::Ignored { reason: Some(msg) })
+                    Ok(test_with::Completion::ignored_with(msg))
                 } else {
                     #ident();
                     Ok(test_with::Completion::Completed)

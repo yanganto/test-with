@@ -59,8 +59,8 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_ips[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following ips not response: \n{}\n", missing_ips.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_ips[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following ips not response: \n{}\n", missing_ips.join(", ")))),
                 }
             }
         },
@@ -80,8 +80,8 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_ips[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following ips not response: \n{}\n", missing_ips.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_ips[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following ips not response: \n{}\n", missing_ips.join(", ")))),
                 }
             }
         },
@@ -98,8 +98,8 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_ips[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following ips not response: \n{}\n", missing_ips.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_ips[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following ips not response: \n{}\n", missing_ips.join(", ")))),
                 }
             }
         },

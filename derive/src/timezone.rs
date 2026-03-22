@@ -116,11 +116,11 @@ pub(crate) fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenS
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                 } else if incorrect_tzs.len() == 1 {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because timezone {} is incorrect", incorrect_tzs[0])) })
+                    Ok(test_with::Completion::ignored_with(format!("because timezone {} is incorrect", incorrect_tzs[0])))
                 } else if incorrect_tzs.len() > 1 {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because following timezones are incorrect:\n{:?}\n", incorrect_tzs)) })
+                    Ok(test_with::Completion::ignored_with(format!("because following timezones are incorrect:\n{:?}\n", incorrect_tzs)))
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the test case not run in following timezone:\n{}\n", #attr_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the test case not run in following timezone:\n{}\n", #attr_str)))
                 }
             }
         },
@@ -144,11 +144,11 @@ pub(crate) fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenS
                             Ok(test_with::Completion::Completed)
                         }
                 } else if incorrect_tzs.len() == 1 {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because timezone {} is incorrect", incorrect_tzs[0])) })
+                    Ok(test_with::Completion::ignored_with(format!("because timezone {} is incorrect", incorrect_tzs[0])))
                 } else if incorrect_tzs.len() > 1 {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because following timezones are incorrect:\n{:?}\n", incorrect_tzs)) })
+                    Ok(test_with::Completion::ignored_with(format!("because following timezones are incorrect:\n{:?}\n", incorrect_tzs)))
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the test case not run in following timezone:\n{}\n", #attr_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the test case not run in following timezone:\n{}\n", #attr_str)))
                 }
             }
         },
@@ -169,11 +169,11 @@ pub(crate) fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenS
                         #ident();
                         Ok(test_with::Completion::Completed)
                 } else if incorrect_tzs.len() == 1 {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because timezone {} is incorrect", incorrect_tzs[0])) })
+                    Ok(test_with::Completion::ignored_with(format!("because timezone {} is incorrect", incorrect_tzs[0])))
                 } else if incorrect_tzs.len() > 1 {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because following timezones are incorrect:\n{:?}\n", incorrect_tzs)) })
+                    Ok(test_with::Completion::ignored_with(format!("because following timezones are incorrect:\n{:?}\n", incorrect_tzs)))
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the test case not run in following timezone:\n{}\n", #attr_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the test case not run in following timezone:\n{}\n", #attr_str)))
                 }
             }
         },

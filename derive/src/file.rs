@@ -73,8 +73,8 @@ pub(crate) fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because file not found: {}", missing_files[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following files not found: \n{}\n", missing_files.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because file not found: {}", missing_files[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following files not found: \n{}\n", missing_files.join(", ")))),
                 }
             }
         },
@@ -95,8 +95,8 @@ pub(crate) fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStrea
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because file not found: {}", missing_files[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following files not found: \n{}\n", missing_files.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because file not found: {}", missing_files[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following files not found: \n{}\n", missing_files.join(", ")))),
                 }
             }
         },
@@ -114,8 +114,8 @@ pub(crate) fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because file not found: {}", missing_files[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following files not found: \n{}\n", missing_files.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because file not found: {}", missing_files[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following files not found: \n{}\n", missing_files.join(", ")))),
                 }
             }
         },
@@ -160,8 +160,8 @@ pub(crate) fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because path not found: {}", missing_paths[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following paths not found: \n{}\n", missing_paths.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because path not found: {}", missing_paths[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following paths not found: \n{}\n", missing_paths.join(", ")))),
                 }
             }
         },
@@ -182,8 +182,8 @@ pub(crate) fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStrea
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because path not found: {}", missing_paths[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following paths not found: \n{}\n", missing_paths.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because path not found: {}", missing_paths[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following paths not found: \n{}\n", missing_paths.join(", ")))),
                 }
             }
         },
@@ -201,8 +201,8 @@ pub(crate) fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStrea
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because path not found: {}", missing_paths[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following paths not found: \n{}\n", missing_paths.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because path not found: {}", missing_paths[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following paths not found: \n{}\n", missing_paths.join(", ")))),
                 }
             }
         },

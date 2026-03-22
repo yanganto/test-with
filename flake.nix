@@ -34,7 +34,7 @@
           fi
         '';
         featureTestScript = pkgs.writeShellScriptBin "feature-test" ''
-          set -e
+          set -e -x
           cargo run --no-default-features --features=http --example=http
           cargo run --no-default-features --features=icmp --example=icmp
           cargo run --no-default-features --example=tcp
@@ -70,8 +70,7 @@
           
           ci = mkShell {
             buildInputs = [
-              # rust-bin.stable.${cargoTomlConfig.workspace.package.rust-version}.default
-              rust-bin.nightly.latest.default
+              rust-bin.stable.${cargoTomlConfig.workspace.package.rust-version}.default
               openssl
               pkg-config
 

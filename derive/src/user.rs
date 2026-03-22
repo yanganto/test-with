@@ -84,7 +84,7 @@ pub(crate) fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStre
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some("because this case should run with root".to_string()) })
+                    Ok(test_with::Completion::ignored_with("because this case should run with root".to_string()))
                 }
             }
         },
@@ -97,7 +97,7 @@ pub(crate) fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStre
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some("because this case should run with root".to_string()) })
+                    Ok(test_with::Completion::ignored_with("because this case should run with root".to_string()))
                 }
             }
         },
@@ -107,7 +107,7 @@ pub(crate) fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStre
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some("because this case should run with root".to_string()) })
+                    Ok(test_with::Completion::ignored_with("because this case should run with root".to_string()))
                 }
             }
         },
@@ -162,7 +162,7 @@ pub(crate) fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStre
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because this case should run user in group {}", #group_name)) })
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run user in group {}", #group_name)))
                 }
             }
         },
@@ -189,7 +189,7 @@ pub(crate) fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStre
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because this case should run user in group {}", #group_name)) })
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run user in group {}", #group_name)))
                 }
             }
         },
@@ -213,7 +213,7 @@ pub(crate) fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStre
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because this case should run user in group {}", #group_name)) })
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run user in group {}", #group_name)))
                 }
             }
         },
@@ -258,7 +258,7 @@ pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because this case should run with user {}", #user_name)) })
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run with user {}", #user_name)))
                 }
             }
         },
@@ -275,7 +275,7 @@ pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because this case should run with user {}", #user_name)) })
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run with user {}", #user_name)))
                 }
             }
         },
@@ -289,7 +289,7 @@ pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because this case should run with user {}", #user_name)) })
+                    Ok(test_with::Completion::ignored_with(format!("because this case should run with user {}", #user_name)))
                 }
             }
         },

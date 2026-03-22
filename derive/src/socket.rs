@@ -54,8 +54,8 @@ pub(crate) fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_sockets[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following sockets not response: \n{}\n", missing_sockets.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_sockets[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following sockets not response: \n{}\n", missing_sockets.join(", ")))),
                 }
             }
         },
@@ -75,8 +75,8 @@ pub(crate) fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_sockets[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following sockets not response: \n{}\n", missing_sockets.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_sockets[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following sockets not response: \n{}\n", missing_sockets.join(", ")))),
                 }
             }
         },
@@ -93,8 +93,8 @@ pub(crate) fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::Ignored { reason: Some(format!("because {} not response", missing_sockets[0])) }),
-                    _ => Ok(test_with::Completion::Ignored { reason: Some(format!("because following sockets not response: \n{}\n", missing_sockets.join(", "))) }),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because {} not response", missing_sockets[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following sockets not response: \n{}\n", missing_sockets.join(", ")))),
                 }
             }
         },

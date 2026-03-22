@@ -100,7 +100,7 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the memory less than {}", #mem_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
@@ -121,7 +121,7 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the memory less than {}", #mem_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
@@ -139,7 +139,7 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the memory less than {}", #mem_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
@@ -187,7 +187,7 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the memory less than {}", #mem_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
@@ -208,7 +208,7 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the memory less than {}", #mem_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
@@ -226,7 +226,7 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the memory less than {}", #mem_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
@@ -274,7 +274,7 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the memory less than {}", #mem_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
@@ -295,7 +295,7 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the memory less than {}", #mem_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
@@ -313,7 +313,7 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the memory less than {}", #mem_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the memory less than {}", #mem_limitation_str)))
                 }
             }
         },
@@ -361,7 +361,7 @@ pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> Token
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the swap less than {}", #swap_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the swap less than {}", #swap_limitation_str)))
                 }
             }
         },
@@ -382,7 +382,7 @@ pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> Token
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the swap less than {}", #swap_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the swap less than {}", #swap_limitation_str)))
                 }
             }
         },
@@ -400,7 +400,7 @@ pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> Token
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the swap less than {}", #swap_limitation_str)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the swap less than {}", #swap_limitation_str)))
                 }
             }
         },
@@ -441,7 +441,7 @@ pub(crate) fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenS
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the cpu core less than {}", #core_limitation)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the cpu core less than {}", #core_limitation)))
                 }
             }
         },
@@ -454,7 +454,7 @@ pub(crate) fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenS
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the cpu core less than {}", #core_limitation)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the cpu core less than {}", #core_limitation)))
                 }
             }
         },
@@ -464,7 +464,7 @@ pub(crate) fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenS
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the cpu core less than {}", #core_limitation)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the cpu core less than {}", #core_limitation)))
                 }
             }
         },
@@ -505,7 +505,7 @@ pub(crate) fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> To
                     #ident().await;
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the physical cpu core less than {}", #core_limitation)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the physical cpu core less than {}", #core_limitation)))
                 }
             }
         },
@@ -518,7 +518,7 @@ pub(crate) fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> To
                         Ok(test_with::Completion::Completed)
                     }
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the physical cpu core less than {}", #core_limitation)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the physical cpu core less than {}", #core_limitation)))
                 }
             }
         },
@@ -528,7 +528,7 @@ pub(crate) fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> To
                     #ident();
                     Ok(test_with::Completion::Completed)
                 } else {
-                    Ok(test_with::Completion::Ignored { reason: Some(format!("because the physical cpu core less than {}", #core_limitation)) })
+                    Ok(test_with::Completion::ignored_with(format!("because the physical cpu core less than {}", #core_limitation)))
                 }
             }
         },

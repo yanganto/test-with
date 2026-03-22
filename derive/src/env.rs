@@ -171,8 +171,8 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
                         #ident().await;
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::ignore_with(format!("because variable {} found", should_no_exist_vars[0]))),
-                    _ => Ok(test_with::Completion::ignore_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} found", should_no_exist_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
                 }
             }
         },
@@ -192,8 +192,8 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
                             Ok(test_with::Completion::Completed)
                         }
                     },
-                    1 => Ok(test_with::Completion::ignore_with(format!("because variable {} found", should_no_exist_vars[0]))),
-                    _ => Ok(test_with::Completion::ignore_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} found", should_no_exist_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
                 }
             }
         },
@@ -210,8 +210,8 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
                         #ident();
                         Ok(test_with::Completion::Completed)
                     },
-                    1 => Ok(test_with::Completion::ignore_with(format!("because variable {} found", should_no_exist_vars[0]))),
-                    _ => Ok(test_with::Completion::ignore_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
+                    1 => Ok(test_with::Completion::ignored_with(format!("because variable {} found", should_no_exist_vars[0]))),
+                    _ => Ok(test_with::Completion::ignored_with(format!("because following variables found: \n{}\n", should_no_exist_vars.join(", ")))),
                 }
             }
         },
