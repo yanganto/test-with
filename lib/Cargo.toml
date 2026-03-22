@@ -27,7 +27,7 @@ uzers = { version = "0.11.3", optional = true }
 
 [features]
 default = ["net", "resource", "user", "executable", "timezone"]
-ign-msg = ["test-with-derive/ign-msg", ]
+ign-msg = ["test-with-derive/ign-msg"]
 
 runtime = ["test-with-derive/runtime", "libtest-mimic"]
 net = ["test-with-derive/net", "http", "icmp"]

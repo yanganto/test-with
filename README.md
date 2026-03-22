@@ -359,7 +359,7 @@ mod test_with_mock {
 We can let an example run with async test case with the following runtime macros (`test_with::tokio_runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).
 Also, it is possible to have async test cases and sync test cases at the same time with `test_with::tokio_runner!`.
 
-Please check out examples under the [example/runner](https://github.com/yanganto/test-with/tree/main/examples/runner) project.
+Please check out examples under the [examples-with-runner](https://github.com/yanganto/test-with/tree/main/examples-with-runner) project.
 
 ## Lock
 `#[test_with::lock(LOCK_NAME)]` is a way to run your test casess one by one with file locks.
@@ -418,7 +418,7 @@ fn test_run_in_TW() {
 [crates-badge]: https://img.shields.io/crates/v/test-with.svg
 [crate-url]: https://crates.io/crates/test-with
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
-[mit-url]: https://github.com/yanganto/test-with/blob/readme/LICENSE
+[mit-url]: https://github.com/yanganto/test-with/blob/main/LICENSE
 [doc-badge]: https://img.shields.io/badge/docs-rs-orange.svg
 [doc-url]: https://docs.rs/test-with/latest/test_with/
 [original-issue]: https://github.com/rust-lang/rust/issues/68007
