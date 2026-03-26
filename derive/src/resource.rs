@@ -20,7 +20,7 @@ pub(crate) fn check_mem_condition(mem_size_str: String) -> (bool, String) {
     };
     (
         mem_size >= mem_size_limitation,
-        format!("because the memory less than {}", mem_size_str),
+        format!("because the memory less than {mem_size_str}"),
     )
 }
 
@@ -39,7 +39,7 @@ pub(crate) fn check_swap_condition(swap_size_str: String) -> (bool, String) {
     };
     (
         swap_size >= swap_size_limitation,
-        format!("because the swap less than {}", swap_size_str),
+        format!("because the swap less than {swap_size_str}"),
     )
 }
 
@@ -49,7 +49,7 @@ pub(crate) fn check_cpu_core_condition(core_limitation_str: String) -> (bool, St
             Ok(c) => num_cpus::get() >= c,
             Err(_) => abort_call_site!("core limitation is incorrect"),
         },
-        format!("because the cpu core less than {}", core_limitation_str),
+        format!("because the cpu core less than {core_limitation_str}"),
     )
 }
 
@@ -59,10 +59,7 @@ pub(crate) fn check_phy_core_condition(core_limitation_str: String) -> (bool, St
             Ok(c) => num_cpus::get_physical() >= c,
             Err(_) => abort_call_site!("physical core limitation is incorrect"),
         },
-        format!(
-            "because the physical cpu core less than {}",
-            core_limitation_str
-        ),
+        format!("because the physical cpu core less than {core_limitation_str}"),
     )
 }
 
@@ -80,10 +77,7 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
@@ -167,10 +161,7 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
@@ -254,10 +245,7 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
@@ -341,10 +329,7 @@ pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> Token
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
@@ -429,10 +414,7 @@ pub(crate) fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenS
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
@@ -493,10 +475,7 @@ pub(crate) fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> To
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {

@@ -87,7 +87,7 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                             },
                         attrs,
                         ..
-                    }) => match crate::utils::test_with_attrs(&attrs) {
+                    }) => match crate::utils::test_with_attrs(attrs) {
                         (true, true, _) => abort_call_site!(
                             "should not use #[test] for method in `#[test_with::module]`"
                         ),
@@ -99,7 +99,7 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     },
                     Item::Struct(ItemStruct { ident, vis, .. })
                     | Item::Type(ItemType { ident, vis, .. }) => {
-                        if ident.to_string() == "TestEnv" {
+                        if *ident == "TestEnv" {
                             match vis {
                                 syn::Visibility::Public(_) => test_env_type = Some(ident),
                                 _ => abort_call_site!("TestEnv should be pub for testing"),
@@ -117,10 +117,7 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     let check_names: Vec<syn::Ident> = test_names
                         .iter()
                         .map(|c| {
-                            syn::Ident::new(
-                                &format!("_check_{}", c.to_string()),
-                                proc_macro2::Span::call_site(),
-                            )
+                            syn::Ident::new(&format!("_check_{c}"), proc_macro2::Span::call_site())
                         })
                         .collect();
                     quote::quote! {
@@ -150,19 +147,13 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     let async_check_names: Vec<syn::Ident> = async_test_names
                         .iter()
                         .map(|c| {
-                            syn::Ident::new(
-                                &format!("_check_{}", c.to_string()),
-                                proc_macro2::Span::call_site(),
-                            )
+                            syn::Ident::new(&format!("_check_{c}"), proc_macro2::Span::call_site())
                         })
                         .collect();
                     let sync_check_names: Vec<syn::Ident> = sync_test_names
                         .iter()
                         .map(|c| {
-                            syn::Ident::new(
-                                &format!("_check_{}", c.to_string()),
-                                proc_macro2::Span::call_site(),
-                            )
+                            syn::Ident::new(&format!("_check_{c}"), proc_macro2::Span::call_site())
                         })
                         .collect();
                     quote::quote! {
@@ -237,10 +228,7 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     let check_names: Vec<syn::Ident> = test_names
                         .iter()
                         .map(|c| {
-                            syn::Ident::new(
-                                &format!("_check_{}", c.to_string()),
-                                proc_macro2::Span::call_site(),
-                            )
+                            syn::Ident::new(&format!("_check_{c}"), proc_macro2::Span::call_site())
                         })
                         .collect();
                     quote::quote! {
@@ -270,19 +258,13 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     let async_check_names: Vec<syn::Ident> = async_test_names
                         .iter()
                         .map(|c| {
-                            syn::Ident::new(
-                                &format!("_check_{}", c.to_string()),
-                                proc_macro2::Span::call_site(),
-                            )
+                            syn::Ident::new(&format!("_check_{c}"), proc_macro2::Span::call_site())
                         })
                         .collect();
                     let sync_check_names: Vec<syn::Ident> = sync_test_names
                         .iter()
                         .map(|c| {
-                            syn::Ident::new(
-                                &format!("_check_{}", c.to_string()),
-                                proc_macro2::Span::call_site(),
-                            )
+                            syn::Ident::new(&format!("_check_{c}"), proc_macro2::Span::call_site())
                         })
                         .collect();
                     quote::quote! {

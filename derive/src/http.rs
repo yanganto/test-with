@@ -8,7 +8,7 @@ pub(crate) fn check_http_condition(attr_str: String) -> (bool, String) {
     let mut missing_links = vec![];
     let client = reqwest::blocking::Client::new();
     for link in links.iter() {
-        if client.head(&format!("http://{}", link)).send().is_err() {
+        if client.head(format!("http://{link}")).send().is_err() {
             missing_links.push(format!("http://{link:}"));
         }
     }
@@ -28,7 +28,7 @@ pub(crate) fn check_https_condition(attr_str: String) -> (bool, String) {
     let mut missing_links = vec![];
     let client = reqwest::blocking::Client::new();
     for link in links.iter() {
-        if client.head(&format!("https://{}", link)).send().is_err() {
+        if client.head(format!("https://{link}")).send().is_err() {
             missing_links.push(format!("https://{link:}"));
         }
     }
@@ -54,10 +54,7 @@ pub(crate) fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStrea
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
@@ -140,10 +137,7 @@ pub(crate) fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStre
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {

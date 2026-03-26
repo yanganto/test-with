@@ -364,7 +364,7 @@ mod tests {
         let env_var2 = "BAR";
         let env_var3 = "BAZ";
 
-        let attr_str = format!("\t{},\n\t{},\n\t{}", env_var1, env_var2, env_var3);
+        let attr_str = format!("\t{env_var1},\n\t{env_var2},\n\t{env_var3}");
 
         //* When
         let result = sanitize_env_vars_attr(&attr_str).collect::<Vec<_>>();

@@ -40,10 +40,7 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {

@@ -34,7 +34,7 @@ pub(crate) fn check_executable_or_condition(attr_str: String) -> (bool, String) 
     }
     (
         false,
-        format!("because none of executables can be found: {}", attr_str),
+        format!("because none of executables can be found: {attr_str}"),
     )
 }
 
@@ -70,10 +70,7 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (has_or_cond, &sig.asyncness, &sig.output) {
         (true, Some(_), ReturnType::Default) => quote::quote! {

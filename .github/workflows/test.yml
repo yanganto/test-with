@@ -17,6 +17,9 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
+      - name: Fmt
+        run: nix develop .#ci -c cargo fmt --check
+
       - name: Example test in features
         run: nix develop .#ci -c feature-test
 
