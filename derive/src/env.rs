@@ -42,10 +42,7 @@ pub(crate) fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
@@ -152,10 +149,7 @@ pub(crate) fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStr
         block,
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
-    let check_ident = syn::Ident::new(
-        &format!("_check_{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    );
+    let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
 
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
@@ -257,7 +251,7 @@ mod tests {
             let env_var2 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
 
             // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}", env_var1, env_var2);
+            let attr_str = format!("{env_var1}, {env_var2}");
 
             //* When
             let (is_ok, ignore_msg) = check_env_condition(attr_str);
@@ -305,7 +299,7 @@ mod tests {
             let env_var2 = "HOME";
 
             // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("\t{},\n\t{}\n", env_var1, env_var2);
+            let attr_str = format!("\t{env_var1},\n\t{env_var2}\n");
 
             //* When
             let (is_ok, ignore_msg) = check_env_condition(attr_str);
@@ -328,7 +322,7 @@ mod tests {
             let env_var3 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
 
             // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
+            let attr_str = format!("{env_var1}, {env_var2}, {env_var3}");
 
             //* When
             let (is_ok, ignore_msg) = check_env_condition(attr_str);
@@ -352,7 +346,7 @@ mod tests {
             let env_var3 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
 
             // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
+            let attr_str = format!("{env_var1}, {env_var2}, {env_var3}");
 
             //* When
             let (is_ok, ignore_msg) = check_env_condition(attr_str);
@@ -395,7 +389,7 @@ mod tests {
             let env_var2 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
 
             // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}", env_var1, env_var2);
+            let attr_str = format!("{env_var1}, {env_var2}");
 
             //* When
             let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
@@ -443,7 +437,7 @@ mod tests {
             let env_var2 = "HOME";
 
             // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("\t{},\n\t{}\n", env_var1, env_var2);
+            let attr_str = format!("\t{env_var1},\n\t{env_var2}\n");
 
             //* When
             let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
@@ -466,7 +460,7 @@ mod tests {
             let env_var3 = "ANOTHER_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
 
             // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
+            let attr_str = format!("{env_var1}, {env_var2}, {env_var3}");
 
             //* When
             let (is_ok, ignore_msg) = check_no_env_condition(attr_str);
@@ -490,7 +484,7 @@ mod tests {
             let env_var3 = "A_RIDICULOUS_ENV_VAR_NAME_THAT_SHOULD_NOT_BE_SET";
 
             // The `test_with::env(<attr_str>)` macro arguments
-            let attr_str = format!("{}, {}, {}", env_var1, env_var2, env_var3);
+            let attr_str = format!("{env_var1}, {env_var2}, {env_var3}");
 
             //* When
             let (is_ok, ignore_msg) = check_no_env_condition(attr_str);

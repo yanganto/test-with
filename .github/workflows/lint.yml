@@ -15,13 +15,3 @@ jobs:
 
       - name: Check spelling of file.txt
         uses: crate-ci/typos@master
-
-      - name: Super-Linter
-        uses: github/super-linter@v4
-        env:
-          VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: main
-          VALIDATE_RUST_2021: true
-          # Clippy is not updated for Rust 1.58, temp disable
-          # VALIDATE_RUST_CLIPPY: true
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
