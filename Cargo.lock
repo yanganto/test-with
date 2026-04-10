@@ -1939,7 +1939,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "test-with"
-version = "0.16.0"
+version = "0.16.1"
 dependencies = [
  "byte-unit",
  "chrono",
@@ -1958,7 +1958,7 @@ dependencies = [
 
 [[package]]
 name = "test-with-derive"
-version = "0.16.0"
+version = "0.16.1"
 dependencies = [
  "byte-unit",
  "chrono",

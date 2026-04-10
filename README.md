@@ -277,7 +277,7 @@ the test runner will treat it as the test in Rust and also provide the same summ
 
 The `runtime` feature should be enabled and include as normal dependency( not dev-dependencies).
 ```toml
-test-with = { version = "0.16.0", features = ["runtime"] }
+test-with = { version = "0.16.1", features = ["runtime"] }
 ```
 
 Create an example with the following runtime macros (`test_with::runner!`, `#[test_with::module]`, `#[test_with::runtime_env()]`).

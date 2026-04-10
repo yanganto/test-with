@@ -3,7 +3,7 @@ members = ["derive", "lib", "examples-with-runner"]
 resolver = "2"
 
 [workspace.package]
-version = "0.16.0"
+version = "0.16.1"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
 description = "A library that helps you run tests with conditions"

@@ -11,7 +11,7 @@ categories.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-test-with-derive = { version = "=0.16.0", path = "../derive", default-features = false }
+test-with-derive = { version = "=0.16.1", path = "../derive", default-features = false }
 
 reqwest = { version = "0.13", features = ["blocking"], optional = true }
 ping = { version = "0.7.1", optional = true }
