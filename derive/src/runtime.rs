@@ -1,5 +1,4 @@
 use proc_macro::TokenStream;
-use proc_macro_error2::abort_call_site;
 use syn::{parse_macro_input, Item, ItemFn, ItemMod, ItemStruct, ItemType};
 
 pub(crate) fn runner(input: TokenStream) -> TokenStream {
@@ -74,9 +73,15 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
     if let Some(content) = content {
         let content = content.1;
         if crate::utils::has_test_cfg(&attrs) {
-            abort_call_site!("should not use `#[cfg(test)]` on the mod with `#[test_with::module]`")
+            return syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "should not use `#[cfg(test)]` on the mod with `#[test_with::module]`",
+            )
+            .to_compile_error()
+            .into();
         } else {
             let mut test_env_type = None;
+            let mut macro_error: Option<syn::Error> = None;
             let test_metas: Vec<(String, bool)> = content
                 .iter()
                 .filter_map(|c| match c {
@@ -88,12 +93,20 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                         attrs,
                         ..
                     }) => match crate::utils::test_with_attrs(attrs) {
-                        (true, true, _) => abort_call_site!(
-                            "should not use #[test] for method in `#[test_with::module]`"
-                        ),
-                        (_, true, false) => abort_call_site!(
-                            "use `#[test_with::runtime_*]` for method in `#[test_with::module]`"
-                        ),
+                        (true, true, _) => {
+                            macro_error = Some(syn::Error::new(
+                                proc_macro2::Span::call_site(),
+                                "should not use #[test] for method in `#[test_with::module]`",
+                            ));
+                            None
+                        }
+                        (_, true, false) => {
+                            macro_error = Some(syn::Error::new(
+                                proc_macro2::Span::call_site(),
+                                "use `#[test_with::runtime_*]` for method in `#[test_with::module]`",
+                            ));
+                            None
+                        }
                         (false, true, true) => Some((ident.to_string(), asyncness.is_some())),
                         _ => None,
                     },
@@ -102,7 +115,12 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                         if *ident == "TestEnv" {
                             match vis {
                                 syn::Visibility::Public(_) => test_env_type = Some(ident),
-                                _ => abort_call_site!("TestEnv should be pub for testing"),
+                                _ => {
+                                    macro_error = Some(syn::Error::new(
+                                        proc_macro2::Span::call_site(),
+                                        "TestEnv should be pub for testing",
+                                    ));
+                                }
                             }
                         }
                         None
@@ -110,6 +128,9 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
                     _ => None,
                 })
                 .collect();
+            if let Some(err) = macro_error {
+                return err.to_compile_error().into();
+            }
 
             let runtime_test_fn = match (test_env_type, test_metas.iter().any(|m| m.1)) {
                 (Some(test_env_type), false) => {
@@ -344,6 +365,11 @@ pub(crate) fn module(_attr: TokenStream, stream: TokenStream) -> TokenStream {
             .into()
         }
     } else {
-        abort_call_site!("should use on mod with context")
+        syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "should use on mod with context",
+        )
+        .to_compile_error()
+        .into()
     }
 }

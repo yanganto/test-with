@@ -1,6 +1,4 @@
 use proc_macro::TokenStream;
-use proc_macro_error2::abort_call_site;
-use proc_macro_error2::proc_macro_error;
 use syn::{parse_macro_input, ItemFn, ItemMod};
 
 #[cfg(feature = "runtime")]
@@ -67,7 +65,6 @@ mod utils;
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -98,13 +95,11 @@ pub fn env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///```
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_env(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
     env::runtime_env(attr, stream)
 }
@@ -122,7 +117,6 @@ pub fn runtime_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///     }
 /// }
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -153,13 +147,11 @@ pub fn no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///```
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_no_env(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
     env::runtime_no_env(attr, stream)
 }
@@ -192,7 +184,6 @@ pub fn runtime_no_env(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -223,13 +214,11 @@ pub fn file(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///```
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_file(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStream {
     file::runtime_file(attr, stream)
 }
@@ -262,7 +251,6 @@ pub fn runtime_file(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -293,13 +281,11 @@ pub fn path(attr: TokenStream, stream: TokenStream) -> TokenStream {
 ///```
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_path(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStream {
     file::runtime_path(attr, stream)
 }
@@ -325,7 +311,6 @@ pub fn runtime_path(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(feature = "http")]
 pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -356,14 +341,12 @@ pub fn http(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_http(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 
 #[cfg(all(feature = "runtime", feature = "http"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStream {
     http::runtime_http(attr, stream)
 }
@@ -389,7 +372,6 @@ pub fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(feature = "http")]
 pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -420,14 +402,12 @@ pub fn https(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(all(not(feature = "runtime"), feature = "http"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_https(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 
 #[cfg(all(feature = "runtime", feature = "http"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStream {
     http::runtime_https(attr, stream)
 }
@@ -455,7 +435,6 @@ pub fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(feature = "icmp")]
 pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -488,14 +467,12 @@ pub fn icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(all(not(feature = "runtime"), feature = "icmp"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_icmp(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 
 #[cfg(all(feature = "runtime", feature = "icmp"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     icmp::runtime_icmp(attr, stream)
 }
@@ -522,7 +499,6 @@ pub fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -553,14 +529,12 @@ pub fn tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_tcp(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     socket::runtime_tcp(attr, stream)
 }
@@ -580,7 +554,6 @@ pub fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(all(feature = "user"))]
 pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -612,13 +585,11 @@ pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_root(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "user"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_root(attr: TokenStream, stream: TokenStream) -> TokenStream {
     user::runtime_root(attr, stream)
 }
@@ -638,7 +609,6 @@ pub fn runtime_root(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(all(feature = "user"))]
 pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -670,13 +640,11 @@ pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_group(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "user"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStream {
     user::runtime_group(attr, stream)
 }
@@ -696,7 +664,6 @@ pub fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(all(feature = "user", not(target_os = "windows")))]
 pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -728,13 +695,11 @@ pub fn user(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_user(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "user"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
     user::runtime_user(attr, stream)
 }
@@ -754,7 +719,6 @@ pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(feature = "resource")]
 pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -786,13 +750,11 @@ pub fn mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "resource"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     resource::runtime_mem(attr, stream)
 }
@@ -811,13 +773,11 @@ pub fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_free_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "resource"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     resource::runtime_free_mem(attr, stream)
 }
@@ -836,13 +796,11 @@ pub fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_available_mem(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "resource"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     resource::runtime_available_mem(attr, stream)
 }
@@ -862,7 +820,6 @@ pub fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStr
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(feature = "resource")]
 pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -894,17 +851,20 @@ pub fn swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_swap(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "resource"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let swap_limitation_str = attr.to_string().replace(' ', "");
     if byte_unit::Byte::parse_str(&swap_limitation_str, true).is_err() {
-        abort_call_site!("swap size description is not correct")
+        return syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "swap size description is not correct",
+        )
+        .to_compile_error()
+        .into();
     }
 
     let ItemFn {
@@ -998,13 +958,11 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_free_swap(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "resource"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     resource::runtime_free_swap(attr, stream)
 }
@@ -1024,7 +982,6 @@ pub fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream 
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(feature = "resource")]
 pub fn cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -1056,13 +1013,11 @@ pub fn cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_cpu_core(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "resource"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     resource::runtime_cpu_core(attr, stream)
 }
@@ -1082,7 +1037,6 @@ pub fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(feature = "resource")]
 pub fn phy_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -1114,13 +1068,11 @@ pub fn phy_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_phy_cpu_core(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "resource"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStream {
     resource::runtime_phy_cpu_core(attr, stream)
 }
@@ -1166,7 +1118,6 @@ pub fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenStre
 /// }
 /// ```
 #[proc_macro_attribute]
-#[proc_macro_error]
 #[cfg(feature = "executable")]
 pub fn executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
@@ -1198,13 +1149,11 @@ pub fn executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_executable(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(all(feature = "runtime", feature = "executable"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream {
     executable::runtime_executable(attr, stream)
 }
@@ -1228,13 +1177,11 @@ pub fn runtime_executable(attr: TokenStream, stream: TokenStream) -> TokenStream
 /// ```
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_ignore_if(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let ignore_function = syn::Ident::new(
         &attr.to_string().replace(' ', ""),
@@ -1331,10 +1278,14 @@ pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream 
 ///
 /// }
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn lock(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
-        abort_call_site!("#[test_with::lock] only works with fn")
+        return syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "#[test_with::lock] only works with fn",
+        )
+        .to_compile_error()
+        .into();
     } else {
         lock_macro(attr, parse_macro_input!(stream as ItemFn))
     }
@@ -1376,7 +1327,6 @@ pub fn lock(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// ```
 #[cfg(feature = "timezone")]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -1407,14 +1357,17 @@ pub fn timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_timezone(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
-    abort_call_site!("should be used with runtime feature")
+    return syn::Error::new(
+        proc_macro2::Span::call_site(),
+        "should be used with runtime feature",
+    )
+    .to_compile_error()
+    .into();
 }
 
 #[cfg(all(feature = "runtime", feature = "timezone"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
     timezone::runtime_timezone(attr, stream)
 }
@@ -1443,7 +1396,12 @@ pub fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenStream {
 #[cfg(not(feature = "runtime"))]
 #[proc_macro]
 pub fn runner(_input: TokenStream) -> TokenStream {
-    abort_call_site!("should be used with runtime feature")
+    return syn::Error::new(
+        proc_macro2::Span::call_site(),
+        "should be used with runtime feature",
+    )
+    .to_compile_error()
+    .into();
 }
 #[cfg(feature = "runtime")]
 #[proc_macro]
@@ -1454,7 +1412,12 @@ pub fn runner(input: TokenStream) -> TokenStream {
 #[cfg(not(feature = "runtime"))]
 #[proc_macro]
 pub fn tokio_runner(_input: TokenStream) -> TokenStream {
-    abort_call_site!("should be used with `runtime` feature")
+    return syn::Error::new(
+        proc_macro2::Span::call_site(),
+        "should be used with `runtime` feature",
+    )
+    .to_compile_error()
+    .into();
 }
 #[cfg(feature = "runtime")]
 #[proc_macro]
@@ -1578,13 +1541,11 @@ pub fn tokio_runner(input: TokenStream) -> TokenStream {
 /// ```
 #[cfg(not(feature = "runtime"))]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn module(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
     panic!("should be used with runtime feature")
 }
 #[cfg(feature = "runtime")]
 #[proc_macro_attribute]
-#[proc_macro_error]
 pub fn module(attr: TokenStream, stream: TokenStream) -> TokenStream {
     runtime::module(attr, stream)
 }

@@ -1,5 +1,3 @@
-use proc_macro_error2::abort_call_site;
-
 #[cfg(feature = "runtime")]
 use proc_macro::TokenStream;
 #[cfg(feature = "runtime")]
@@ -20,13 +18,11 @@ pub(crate) fn check_timezone(attr_str: &str) -> (bool, Vec<&str>) {
             "ACST" => Ok(9 * 60 + 30),
             "KST" | "JST" => Ok(9 * 60),
             "HKT" | "WITA" | "AWST" => Ok(8 * 60),
-            "PST" => abort_call_site!("PST can be GMT+8 or GMT-8, please use +8 or -8 instead"),
+            "PST" => panic!("PST can be GMT+8 or GMT-8, please use +8 or -8 instead"),
             "WIB" => Ok(7 * 60),
-            "CST" => abort_call_site!("PST can be GMT+8 or GMT-6, please use +8 or -6 instead"),
+            "CST" => panic!("PST can be GMT+8 or GMT-6, please use +8 or -6 instead"),
             "5.5" | "+5.5" => Ok(5 * 60 + 30),
-            "IST" => abort_call_site!(
-                "IST can be GMT+5.5, GMT+2 or GMT+1, please use +5.5, 2 or 1 instead"
-            ),
+            "IST" => panic!("IST can be GMT+5.5, GMT+2 or GMT+1, please use +5.5, 2 or 1 instead"),
             "PKT" => Ok(5 * 60),
             "EAT" | "EEST" | "IDT" | "MSK" => Ok(3 * 60),
             "CAT" | "EET" | "CEST" | "SAST" => Ok(2 * 60),
