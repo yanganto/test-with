@@ -4,15 +4,9 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11-small";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
-    dependency-refresh = {
-      url = "github:yanganto/dependency-refresh";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-      };
-    };
   };
 
-  outputs = { self, rust-overlay, nixpkgs, flake-utils, dependency-refresh }:
+  outputs = { self, rust-overlay, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -20,20 +14,11 @@
           inherit system overlays;
         };
         
-        dr = dependency-refresh.defaultPackage.${system};
-
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
           cargo login $1
           cargo publish -p test-with-derive || echo "publish test-with-derive fail"
           sleep 10
           cargo publish -p test-with
-        '';
-        updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
-          dr -p ./Cargo.toml
-          if [ -f "Cargo.toml.old" ]; then
-            rm Cargo.toml.old
-            exit 1
-          fi
         '';
         featureTestScript = pkgs.writeShellScriptBin "feature-test" ''
           set -e -x
@@ -76,10 +61,8 @@
               openssl
               pkg-config
 
-              dr
               publishScript
               featureTestScript
-              updateDependencyScript
             ];
             SAYING = ''
               The value of a man resides in what he gives
