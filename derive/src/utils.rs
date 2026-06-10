@@ -4,7 +4,6 @@ use proc_macro::TokenStream;
 #[cfg(feature = "ign-msg")]
 use proc_macro2::Span;
 use proc_macro2::TokenTree;
-use proc_macro_error2::abort_call_site;
 use quote::quote;
 #[cfg(feature = "ign-msg")]
 use syn::Signature;
@@ -57,7 +56,7 @@ pub(crate) fn check_before_attrs(attrs: &[Attribute]) {
     for attr in attrs.iter() {
         if let Some(seg) = attr.path().segments.last() {
             if seg.ident == "serial" {
-                abort_call_site!("`#[test_with::*]` should place after `#[serial]`");
+                panic!("`#[test_with::*]` should place after `#[serial]`");
             }
         }
     }
@@ -254,7 +253,12 @@ pub(crate) fn mod_macro(
             .into()
         }
     } else {
-        abort_call_site!("should use on mod with context")
+        return syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "should use on mod with context",
+        )
+        .to_compile_error()
+        .into();
     }
 }
 
@@ -274,11 +278,21 @@ pub(crate) fn lock_macro(attr: TokenStream, input: ItemFn) -> TokenStream {
             if let Ok(wait_time) = sec.parse::<usize>() {
                 (name, wait_time)
             } else {
-                abort_call_site!("`The second parameter of #[test_with::lock]` should be a number for waiting time");
+                return syn::Error::new(
+                    proc_macro2::Span::call_site(),
+                    "`The second parameter of #[test_with::lock]` should be a number for waiting time",
+                )
+                .to_compile_error()
+                .into();
             }
         }
         (None, _) => {
-            abort_call_site!("`#[test_with::lock]` need a name for the file lock");
+            return syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "`#[test_with::lock]` need a name for the file lock",
+            )
+            .to_compile_error()
+            .into();
         }
     };
     let lock_file = std::env::temp_dir().join(lock_name).display().to_string();

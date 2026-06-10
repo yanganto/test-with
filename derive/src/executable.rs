@@ -1,4 +1,3 @@
-use proc_macro_error2::abort_call_site;
 use which::which;
 
 #[cfg(feature = "runtime")]
@@ -42,7 +41,7 @@ pub(crate) fn check_executable_condition(attr_str: String) -> (bool, String) {
     let has_and_cond = attr_str.contains(',');
     let has_or_cond = attr_str.contains("||");
     if has_and_cond && has_or_cond {
-        abort_call_site!("',' and '||' can not be used at the same time")
+        panic!("',' and '||' can not be used at the same time")
     } else if has_or_cond {
         check_executable_or_condition(attr_str)
     } else {
@@ -56,7 +55,12 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
     let has_and_cond = attr_str.contains(',');
     let has_or_cond = attr_str.contains("||");
     if has_and_cond && has_or_cond {
-        abort_call_site!("',' and '||' can not be used at the same time")
+        return syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "',' and '||' can not be used at the same time",
+        )
+        .to_compile_error()
+        .into();
     }
     let executables: Vec<&str> = if has_or_cond {
         attr_str.split("||").collect()

@@ -1,6 +1,3 @@
-#[cfg(target_os = "windows")]
-use proc_macro_error2::abort_call_site;
-
 #[cfg(feature = "runtime")]
 use proc_macro::TokenStream;
 #[cfg(feature = "runtime")]
@@ -16,7 +13,7 @@ pub(crate) fn check_root_condition(_attr_str: String) -> (bool, String) {
 }
 #[cfg(target_os = "windows")]
 pub(crate) fn check_root_condition(_attr_str: String) -> (bool, String) {
-    abort_call_site!("windows do not support root user condition")
+    panic!("windows do not support root user condition")
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -44,7 +41,7 @@ pub(crate) fn check_group_condition(group_name: String) -> (bool, String) {
 
 #[cfg(target_os = "windows")]
 pub(crate) fn check_group_condition(group_name: String) -> (bool, String) {
-    abort_call_site!("windows do not support user group condition")
+    panic!("windows do not support user group condition")
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -60,7 +57,7 @@ pub(crate) fn check_user_condition(user_name: String) -> (bool, String) {
 }
 #[cfg(target_os = "windows")]
 pub(crate) fn check_user_condition(user_name: String) -> (bool, String) {
-    abort_call_site!("windows do not support user condition")
+    panic!("windows do not support user condition")
 }
 
 #[cfg(all(feature = "runtime", not(target_os = "windows")))]
@@ -120,7 +117,12 @@ pub(crate) fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStre
 
 #[cfg(all(feature = "runtime", target_os = "windows"))]
 pub(crate) fn runtime_root(_attr: TokenStream, stream: TokenStream) -> TokenStream {
-    abort_call_site!("windows do not support root user condition")
+    return syn::Error::new(
+        proc_macro2::Span::call_site(),
+        "windows do not support root user condition",
+    )
+    .to_compile_error()
+    .into();
 }
 
 #[cfg(all(feature = "runtime", not(target_os = "windows")))]
@@ -223,7 +225,12 @@ pub(crate) fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStre
 
 #[cfg(all(feature = "runtime", target_os = "windows"))]
 pub(crate) fn runtime_group(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    abort_call_site!("windows do not support user group condition")
+    return syn::Error::new(
+        proc_macro2::Span::call_site(),
+        "windows do not support user group condition",
+    )
+    .to_compile_error()
+    .into();
 }
 
 #[cfg(all(feature = "runtime", not(target_os = "windows")))]
@@ -296,5 +303,10 @@ pub fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
 
 #[cfg(all(feature = "runtime", target_os = "windows"))]
 pub(crate) fn runtime_user(attr: TokenStream, stream: TokenStream) -> TokenStream {
-    abort_call_site!("windows do not support user condition")
+    return syn::Error::new(
+        proc_macro2::Span::call_site(),
+        "windows do not support user condition",
+    )
+    .to_compile_error()
+    .into();
 }

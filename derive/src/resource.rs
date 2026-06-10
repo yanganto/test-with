@@ -1,5 +1,3 @@
-use proc_macro_error2::abort_call_site;
-
 #[cfg(feature = "runtime")]
 use proc_macro::TokenStream;
 #[cfg(feature = "runtime")]
@@ -12,11 +10,11 @@ pub(crate) fn check_mem_condition(mem_size_str: String) -> (bool, String) {
     );
     let mem_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
         Ok(b) => b,
-        Err(_) => abort_call_site!("memory size description is not correct"),
+        Err(_) => panic!("memory size description is not correct"),
     };
     let mem_size_limitation = match byte_unit::Byte::parse_str(&mem_size_str, true) {
         Ok(b) => b,
-        Err(_) => abort_call_site!("system memory size can not get"),
+        Err(_) => panic!("system memory size can not get"),
     };
     (
         mem_size >= mem_size_limitation,
@@ -31,11 +29,11 @@ pub(crate) fn check_swap_condition(swap_size_str: String) -> (bool, String) {
     );
     let swap_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
         Ok(b) => b,
-        Err(_) => abort_call_site!("Swap size description is not correct"),
+        Err(_) => panic!("Swap size description is not correct"),
     };
     let swap_size_limitation = match byte_unit::Byte::parse_str(&swap_size_str, true) {
         Ok(b) => b,
-        Err(_) => abort_call_site!("Can not get system swap size"),
+        Err(_) => panic!("Can not get system swap size"),
     };
     (
         swap_size >= swap_size_limitation,
@@ -47,7 +45,7 @@ pub(crate) fn check_cpu_core_condition(core_limitation_str: String) -> (bool, St
     (
         match core_limitation_str.parse::<usize>() {
             Ok(c) => num_cpus::get() >= c,
-            Err(_) => abort_call_site!("core limitation is incorrect"),
+            Err(_) => panic!("core limitation is incorrect"),
         },
         format!("because the cpu core less than {core_limitation_str}"),
     )
@@ -57,7 +55,7 @@ pub(crate) fn check_phy_core_condition(core_limitation_str: String) -> (bool, St
     (
         match core_limitation_str.parse::<usize>() {
             Ok(c) => num_cpus::get_physical() >= c,
-            Err(_) => abort_call_site!("physical core limitation is incorrect"),
+            Err(_) => panic!("physical core limitation is incorrect"),
         },
         format!("because the physical cpu core less than {core_limitation_str}"),
     )
@@ -67,7 +65,12 @@ pub(crate) fn check_phy_core_condition(core_limitation_str: String) -> (bool, St
 pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let mem_limitation_str = attr.to_string().replace(' ', "");
     if byte_unit::Byte::parse_str(&mem_limitation_str, true).is_err() {
-        abort_call_site!("memory size description is not correct")
+        return syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "memory size description is not correct",
+        )
+        .to_compile_error()
+        .into();
     }
 
     let ItemFn {
@@ -151,7 +154,12 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
 pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let mem_limitation_str = attr.to_string().replace(' ', "");
     if byte_unit::Byte::parse_str(&mem_limitation_str, true).is_err() {
-        abort_call_site!("memory size description is not correct")
+        return syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "memory size description is not correct",
+        )
+        .to_compile_error()
+        .into();
     }
 
     let ItemFn {
@@ -235,7 +243,12 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
 pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let mem_limitation_str = attr.to_string().replace(' ', "");
     if byte_unit::Byte::parse_str(&mem_limitation_str, true).is_err() {
-        abort_call_site!("memory size description is not correct")
+        return syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "memory size description is not correct",
+        )
+        .to_compile_error()
+        .into();
     }
 
     let ItemFn {
@@ -319,7 +332,12 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
 pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let swap_limitation_str = attr.to_string().replace(' ', "");
     if byte_unit::Byte::parse_str(&swap_limitation_str, true).is_err() {
-        abort_call_site!("swap size description is not correct")
+        return syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "swap size description is not correct",
+        )
+        .to_compile_error()
+        .into();
     }
 
     let ItemFn {
@@ -404,7 +422,14 @@ pub(crate) fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenS
     let attr_str = attr.to_string().replace(' ', "");
     let core_limitation = match attr_str.parse::<usize>() {
         Ok(c) => c,
-        Err(_) => abort_call_site!("core limitation is incorrect"),
+        Err(_) => {
+            return syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "core limitation is incorrect",
+            )
+            .to_compile_error()
+            .into()
+        }
     };
 
     let ItemFn {
@@ -465,7 +490,14 @@ pub(crate) fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> To
     let attr_str = attr.to_string().replace(' ', "");
     let core_limitation = match attr_str.parse::<usize>() {
         Ok(c) => c,
-        Err(_) => abort_call_site!("physical core limitation is incorrect"),
+        Err(_) => {
+            return syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "physical core limitation is incorrect",
+            )
+            .to_compile_error()
+            .into()
+        }
     };
 
     let ItemFn {

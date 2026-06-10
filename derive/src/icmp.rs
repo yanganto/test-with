@@ -1,4 +1,3 @@
-use proc_macro_error2::abort_call_site;
 use std::net::IpAddr;
 
 #[cfg(feature = "runtime")]
@@ -15,7 +14,7 @@ pub(crate) fn check_icmp_condition(attr_str: String) -> (bool, String) {
                 missing_ips.push(ip.to_string());
             }
         } else {
-            abort_call_site!("ip address malformat")
+            panic!("ip address malformat")
         }
     }
     let ignore_msg = if missing_ips.len() == 1 {
