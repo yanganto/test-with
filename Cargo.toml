@@ -3,11 +3,12 @@ members = ["derive", "lib", "examples-with-runner"]
 resolver = "2"
 
 [workspace.package]
-version = "0.16.2"
+version = "0.16.3"
 authors = ["Antonio Yang <yanganto@gmail.com>"]
 edition = "2021"
 description = "A library that helps you run tests with conditions"
 license = "MIT"
+readme = "README.md"
 repository = "https://github.com/yanganto/test-with"
 keywords = [ "testing", "condition", "toggle", "integration", "ignore" ]
 categories = [ "development-tools" ]

@@ -9,6 +9,7 @@ repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
 rust-version.workspace = true
+readme.workspace = true
 
 [lib]
 proc-macro = true
