@@ -24,7 +24,7 @@ chrono = { version = "0.4", optional = true }
 libtest-mimic = { version = "0.8.2", optional = true }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
-uzers = { version = "0.12.2", optional = true }
+uzers = { version = "0.12", optional = true }
 
 [features]
 default = ["net", "resource", "user", "executable", "timezone"]
