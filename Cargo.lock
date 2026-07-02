@@ -1092,9 +1092,9 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "ping"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "044b1fa4f259f4df9ad5078e587b208f5d288a25407575fcddb9face30c7c692"
+checksum = "fb19e959ef149db2aaedfb5317bd0770b06d2ff811145ade123a456f883e2e04"
 dependencies = [
  "rand 0.9.2",
  "socket2",
