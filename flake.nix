@@ -41,6 +41,7 @@
           cargo run --example mock2
           cargo run --example mix
           cargo run --example tokio
+          cargo run --example ip
         '';
         cargoTomlConfig = builtins.fromTOML (builtins.readFile ./Cargo.toml);
       in
