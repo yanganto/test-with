@@ -39,6 +39,7 @@ runtime = []
 net = ["http", "icmp"]
 http = ["reqwest"]
 icmp = ["ping"]
+ip = []
 
 resource = ["sysinfo", "byte-unit", "num_cpus"]
 user = ["uzers"]

@@ -18,6 +18,9 @@ mod icmp;
 mod resource;
 #[cfg(feature = "runtime")]
 mod runtime;
+#[cfg(all(feature = "runtime", feature = "ip"))]
+mod runtime_ip;
+
 mod socket;
 #[cfg(feature = "timezone")]
 mod timezone;
@@ -475,6 +478,123 @@ pub fn runtime_icmp(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStream {
     icmp::runtime_icmp(attr, stream)
+}
+
+/// Run test case when the example running and one of the interface ip is in the CIDR.
+///```rust
+/// // write as example in examples/*rs
+/// test_with::runner!(ip);
+/// #[test_with::module]
+/// mod ip {
+///     // Only works when one of the interface ip is in 192.168.1.0/24
+///     #[test_with::runtime_ip_in(192.168.1.0/24)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(all(not(feature = "runtime"), feature = "ip"))]
+#[proc_macro_attribute]
+pub fn runtime_ip_in(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime", feature = "ip"))]
+#[proc_macro_attribute]
+pub fn runtime_ip_in(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    runtime_ip::runtime_ip_in(attr, stream)
+}
+
+/// Run test case when the example running and the public ip can be got.
+/// The default check site is `https://ip.me`, and can be overridden with `ip_check_site=<url>`.
+///```rust
+/// // write as example in examples/*rs
+/// test_with::runner!(ip);
+/// #[test_with::module]
+/// mod ip {
+///     // Only works when the public ip can be got from https://ip.me
+///     #[test_with::runtime_public_ip]
+///     fn test_works() {
+///         assert!(true);
+///     }
+///
+///     // Or override the check site (url has to be a string literal)
+///     #[test_with::runtime_public_ip(ip_check_site = "https://ipinfo.io/ip")]
+///     fn test_works_with_other_site() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(all(not(feature = "runtime"), feature = "ip"))]
+#[proc_macro_attribute]
+pub fn runtime_public_ip(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime", feature = "ip"))]
+#[proc_macro_attribute]
+pub fn runtime_public_ip(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    runtime_ip::runtime_public_ip(attr, stream)
+}
+
+/// Run test case when the example running and the public ip is in the CIDR.
+/// The default check site is `https://ip.me`, and can be overridden with `ip_check_site=<url>`.
+///```rust
+/// // write as example in examples/*rs
+/// test_with::runner!(ip);
+/// #[test_with::module]
+/// mod ip {
+///     // Only works when the public ip is in 1.2.3.0/24
+///     #[test_with::runtime_public_ip_in(1.2.3.0/24)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+///
+///     // Or override the check site (url has to be a string literal)
+///     #[test_with::runtime_public_ip_in(1.2.3.0/24, ip_check_site = "https://ipinfo.io/ip")]
+///     fn test_works_with_other_site() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(all(not(feature = "runtime"), feature = "ip"))]
+#[proc_macro_attribute]
+pub fn runtime_public_ip_in(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime", feature = "ip"))]
+#[proc_macro_attribute]
+pub fn runtime_public_ip_in(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    runtime_ip::runtime_public_ip_in(attr, stream)
+}
+
+/// Run test case when the example running and the public ip is exactly the expected ip.
+/// The default check site is `https://ip.me`, and can be overridden with `ip_check_site=<url>`.
+///```rust
+/// // write as example in examples/*rs
+/// test_with::runner!(ip);
+/// #[test_with::module]
+/// mod ip {
+///     // Only works when the public ip is 1.2.3.4
+///     #[test_with::runtime_public_ip_is(1.2.3.4)]
+///     fn test_works() {
+///         assert!(true);
+///     }
+///
+///     // Or override the check site (url has to be a string literal)
+///     #[test_with::runtime_public_ip_is(1.2.3.4, ip_check_site = "https://ipinfo.io/ip")]
+///     fn test_works_with_other_site() {
+///         assert!(true);
+///     }
+/// }
+#[cfg(all(not(feature = "runtime"), feature = "ip"))]
+#[proc_macro_attribute]
+pub fn runtime_public_ip_is(_attr: TokenStream, _stream: TokenStream) -> TokenStream {
+    panic!("should be used with runtime feature")
+}
+
+#[cfg(all(feature = "runtime", feature = "ip"))]
+#[proc_macro_attribute]
+pub fn runtime_public_ip_is(attr: TokenStream, stream: TokenStream) -> TokenStream {
+    runtime_ip::runtime_public_ip_is(attr, stream)
 }
 
 /// Run test case when socket connected

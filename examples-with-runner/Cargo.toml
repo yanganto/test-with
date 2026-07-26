@@ -7,5 +7,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-test-with = { path = "../lib", features = ["runtime", "net", "resource", "user", "executable", "timezone"] }
+test-with = { path = "../lib", features = ["runtime", "net", "ip", "resource", "user", "executable", "timezone"] }
 tokio = "1.45.1"
