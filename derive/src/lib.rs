@@ -674,7 +674,7 @@ pub fn runtime_tcp(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[cfg(all(feature = "user"))]
+#[cfg(feature = "user")]
 pub fn root(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -729,7 +729,7 @@ pub fn runtime_root(attr: TokenStream, stream: TokenStream) -> TokenStream {
 /// }
 /// ```
 #[proc_macro_attribute]
-#[cfg(all(feature = "user"))]
+#[cfg(feature = "user")]
 pub fn group(attr: TokenStream, stream: TokenStream) -> TokenStream {
     if is_module(&stream) {
         mod_macro(
@@ -992,6 +992,7 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -1312,6 +1313,7 @@ pub fn runtime_ignore_if(attr: TokenStream, stream: TokenStream) -> TokenStream 
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
