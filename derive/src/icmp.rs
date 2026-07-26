@@ -10,7 +10,7 @@ pub(crate) fn check_icmp_condition(attr_str: String) -> (bool, String) {
     let mut missing_ips = vec![];
     for ip in ips.iter() {
         if let Ok(addr) = ip.parse::<IpAddr>() {
-            if ping::ping(addr, None, None, None, None, None).is_err() {
+            if ping::Ping::new(addr).send().is_err() {
                 missing_ips.push(ip.to_string());
             }
         } else {
@@ -37,6 +37,7 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -46,7 +47,7 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_ips = vec![];
                 #(
-                    if test_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
+                    if test_with::ping::Ping::new(#ips.parse().expect("ip address is invalid")).send().is_err() {
                         missing_ips.push(#ips);
                     }
                 )*
@@ -64,7 +65,7 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_ips = vec![];
                 #(
-                    if test_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
+                    if test_with::ping::Ping::new(#ips.parse().expect("ip address is invalid")).send().is_err() {
                         missing_ips.push(#ips);
                     }
                 )*
@@ -85,7 +86,7 @@ pub(crate) fn runtime_icmp(attr: TokenStream, stream: TokenStream) -> TokenStrea
             fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
                 let mut missing_ips = vec![];
                 #(
-                    if test_with::ping::ping(#ips.parse().expect("ip address is invalid"), None, None, None, None, None).is_err() {
+                    if test_with::ping::Ping::new(#ips.parse().expect("ip address is invalid")).send().is_err() {
                         missing_ips.push(#ips);
                     }
                 )*

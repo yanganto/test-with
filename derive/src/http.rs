@@ -52,6 +52,7 @@ pub(crate) fn runtime_http(attr: TokenStream, stream: TokenStream) -> TokenStrea
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -135,6 +136,7 @@ pub(crate) fn runtime_https(attr: TokenStream, stream: TokenStream) -> TokenStre
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());

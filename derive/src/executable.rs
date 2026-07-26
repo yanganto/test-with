@@ -72,6 +72,7 @@ pub(crate) fn runtime_executable(attr: TokenStream, stream: TokenStream) -> Toke
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());

@@ -78,6 +78,7 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -167,6 +168,7 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -256,6 +258,7 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -345,6 +348,7 @@ pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> Token
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -437,6 +441,7 @@ pub(crate) fn runtime_cpu_core(attr: TokenStream, stream: TokenStream) -> TokenS
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -505,6 +510,7 @@ pub(crate) fn runtime_phy_cpu_core(attr: TokenStream, stream: TokenStream) -> To
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());

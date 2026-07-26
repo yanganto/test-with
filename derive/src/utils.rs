@@ -115,6 +115,7 @@ pub(crate) fn fn_macro(
         vis,
         mut sig,
         block,
+        ..
     } = input;
     #[cfg(not(feature = "ign-msg"))]
     let ItemFn {
@@ -122,6 +123,7 @@ pub(crate) fn fn_macro(
         vis,
         sig,
         block,
+        ..
     } = input;
     let attr_str = attr.to_string().replace(' ', "");
     let (all_var_exist, ignore_msg) = check_condition(attr_str);
@@ -268,6 +270,7 @@ pub(crate) fn lock_macro(attr: TokenStream, input: ItemFn) -> TokenStream {
         vis,
         sig,
         block,
+        ..
     } = input;
     let Block { stmts, .. } = *block;
     let attr_str = attr.to_string().replace(' ', "");

@@ -84,6 +84,7 @@ pub(crate) fn runtime_timezone(attr: TokenStream, stream: TokenStream) -> TokenS
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());

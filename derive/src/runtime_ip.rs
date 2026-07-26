@@ -64,6 +64,7 @@ pub(crate) fn runtime_public_ip(attr: TokenStream, stream: TokenStream) -> Token
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -132,6 +133,7 @@ pub(crate) fn runtime_public_ip_in(attr: TokenStream, stream: TokenStream) -> To
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -215,6 +217,7 @@ pub(crate) fn runtime_public_ip_is(attr: TokenStream, stream: TokenStream) -> To
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
@@ -286,6 +289,7 @@ pub(crate) fn runtime_ip_in(attr: TokenStream, stream: TokenStream) -> TokenStre
         vis,
         sig,
         block,
+        ..
     } = parse_macro_input!(stream as ItemFn);
     let syn::Signature { ident, .. } = sig.clone();
     let check_ident = syn::Ident::new(&format!("_check_{ident}"), proc_macro2::Span::call_site());
