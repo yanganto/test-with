@@ -25,7 +25,9 @@
 //! features in `Cargo.toml`
 //! [macro@runner] and [macro@module] are for the basic skeleton of the test runner.
 //! [macro@runtime_env], [macro@runtime_no_env], [macro@runtime_file], [macro@runtime_path],
-//! [macro@runtime_http], [macro@runtime_https], [macro@runtime_icmp], [macro@runtime_tcp],
+//! [macro@runtime_http], [macro@runtime_https], [macro@runtime_icmp], [macro@runtime_ip_in],
+//! [macro@runtime_public_ip], [macro@runtime_public_ip_in], [macro@runtime_public_ip_is],
+//! [macro@runtime_tcp],
 //! [macro@runtime_root], [macro@runtime_group], [macro@runtime_user], [macro@runtime_mem],
 //! [macro@runtime_free_mem], [macro@runtime_available_mem], [macro@runtime_swap],
 //! [macro@runtime_free_swap], [macro@runtime_available_swap], [macro@runtime_cpu_core],
@@ -60,11 +62,15 @@ pub use libtest_mimic::*;
 pub use byte_unit;
 #[cfg(all(feature = "runtime", feature = "timezone"))]
 pub use chrono;
+#[cfg(all(feature = "runtime", feature = "ip"))]
+pub use ipnet;
+#[cfg(all(feature = "runtime", feature = "ip"))]
+pub use local_ip_address;
 #[cfg(all(feature = "runtime", feature = "resource"))]
 pub use num_cpus;
 #[cfg(all(feature = "runtime", feature = "icmp"))]
 pub use ping;
-#[cfg(all(feature = "runtime", feature = "http"))]
+#[cfg(all(feature = "runtime", any(feature = "http", feature = "ip")))]
 pub use reqwest;
 #[cfg(all(feature = "runtime", feature = "resource"))]
 pub use sysinfo;

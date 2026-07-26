@@ -309,6 +309,59 @@ mod custom_mod {
 }
 ```
 
+or you can run the test case only when one of the network interface ip is in a CIDR with
+`runtime_ip_in`.  It requires the `ip` feature (with the `runtime` feature) if default features
+are disabled.
+```rust
+test_with::runner!(ip);
+
+#[test_with::module]
+mod ip {
+    // Only run when one of the interface ip is in 192.168.1.0/24
+    #[test_with::runtime_ip_in(192.168.1.0/24)]
+    fn test_works() {
+        assert!(true);
+    }
+}
+```
+
+or you can run the test case depending on the public ip with `runtime_public_ip` (run when the
+public ip can be got), `runtime_public_ip_in` (run when the public ip is in a CIDR) and
+`runtime_public_ip_is` (run when the public ip is exactly the expected ip).  They default to check
+the public ip with `https://ip.me`, and it can be overridden with an `ip_check_site` string
+literal.  They require the `ip` feature (with the `runtime` feature) if default features are
+disabled.
+```rust
+test_with::runner!(ip);
+
+#[test_with::module]
+mod ip {
+    // Only run when the public ip can be got from https://ip.me
+    #[test_with::runtime_public_ip]
+    fn test_works() {
+        assert!(true);
+    }
+
+    // Override the check site (url has to be a string literal)
+    #[test_with::runtime_public_ip(ip_check_site = "https://ifconfig.me/ip")]
+    fn test_works_with_other_site() {
+        assert!(true);
+    }
+
+    // Only run when the public ip is in 1.2.3.0/24
+    #[test_with::runtime_public_ip_in(1.2.3.0/24)]
+    fn test_works_in_cidr() {
+        assert!(true);
+    }
+
+    // Only run when the public ip is exactly 1.2.3.4
+    #[test_with::runtime_public_ip_is(1.2.3.4)]
+    fn test_works_is() {
+        assert!(true);
+    }
+}
+```
+
 There are two ways to setup mock service in the test runner, one is by `struct` and the other is by `type`.
 ```rust
 test_with::runner!(test_with_mock);
