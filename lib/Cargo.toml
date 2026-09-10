@@ -46,4 +46,4 @@ timezone = ["test-with-derive/timezone", "chrono"]
 [dev-dependencies]
 tokio = { version = "1.38.0", features = ["rt", "rt-multi-thread", "macros"] }
 serial_test = "4.0.1"
-rstest = "0.26.1"
+rstest = "0.27.0"
