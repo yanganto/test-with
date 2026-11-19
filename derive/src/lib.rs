@@ -1000,9 +1000,11 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
@@ -1018,9 +1020,11 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
@@ -1039,9 +1043,11 @@ pub fn runtime_swap(attr: TokenStream, stream: TokenStream) -> TokenStream {
         },
         (None, _) => quote::quote! {
             fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),

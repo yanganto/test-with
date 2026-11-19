@@ -8,6 +8,9 @@ pub(crate) fn check_mem_condition(mem_size_str: String) -> (bool, String) {
         sysinfo::RefreshKind::nothing()
             .with_memory(sysinfo::MemoryRefreshKind::nothing().with_swap()),
     );
+    let Ok(sys) = sys else {
+        panic!("Fail to fetch sys info")
+    };
     let mem_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
         Ok(b) => b,
         Err(_) => panic!("memory size description is not correct"),
@@ -23,13 +26,15 @@ pub(crate) fn check_mem_condition(mem_size_str: String) -> (bool, String) {
 }
 
 pub(crate) fn check_swap_condition(swap_size_str: String) -> (bool, String) {
-    let sys = sysinfo::System::new_with_specifics(
+    let Ok(sys) = sysinfo::System::new_with_specifics(
         sysinfo::RefreshKind::nothing()
             .with_memory(sysinfo::MemoryRefreshKind::nothing().with_swap()),
-    );
+    ) else {
+        panic!("Fail to fetch sys info")
+    };
     let swap_size = match byte_unit::Byte::parse_str(format!("{} B", sys.total_swap()), false) {
         Ok(b) => b,
-        Err(_) => panic!("Swap size description is not correct"),
+        Err(_) => panic!("swap size description is not correct"),
     };
     let swap_size_limitation = match byte_unit::Byte::parse_str(&swap_size_str, true) {
         Ok(b) => b,
@@ -86,9 +91,11 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
@@ -104,9 +111,11 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
@@ -125,9 +134,11 @@ pub(crate) fn runtime_mem(attr: TokenStream, stream: TokenStream) -> TokenStream
         },
         (None, _) => quote::quote! {
             fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.total_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
@@ -176,9 +187,11 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
@@ -194,9 +207,11 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
@@ -215,9 +230,11 @@ pub(crate) fn runtime_free_mem(attr: TokenStream, stream: TokenStream) -> TokenS
         },
         (None, _) => quote::quote! {
             fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
@@ -266,9 +283,11 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
@@ -284,9 +303,11 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
@@ -305,9 +326,11 @@ pub(crate) fn runtime_available_mem(attr: TokenStream, stream: TokenStream) -> T
         },
         (None, _) => quote::quote! {
             fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_ram()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let mem_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.available_memory()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system memory size can not get"),
@@ -356,9 +379,11 @@ pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> Token
     let check_fn = match (&sig.asyncness, &sig.output) {
         (Some(_), ReturnType::Default) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
@@ -374,9 +399,11 @@ pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> Token
         },
         (Some(_), ReturnType::Type(_, _)) => quote::quote! {
             async fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
@@ -395,9 +422,11 @@ pub(crate) fn runtime_free_swap(attr: TokenStream, stream: TokenStream) -> Token
         },
         (None, _) => quote::quote! {
             fn #check_ident() -> Result<test_with::Completion, test_with::Failed> {
-                let sys = test_with::sysinfo::System::new_with_specifics(
+                let Ok(sys) = test_with::sysinfo::System::new_with_specifics(
                     test_with::sysinfo::RefreshKind::nothing().with_memory(test_with::sysinfo::MemoryRefreshKind::nothing().with_swap()),
-                );
+                ) else {
+                    panic!("Fail to fetch sys info")
+                };
                 let swap_size = match test_with::byte_unit::Byte::parse_str(format!("{} B", sys.free_swap()), false) {
                     Ok(b) => b,
                     Err(_) => panic!("system swap size can not get"),
